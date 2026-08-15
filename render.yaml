@@ -31,17 +31,18 @@ services:
         fromDatabase:
           name: nexusguard-db
           property: connectionString
-      # Fixed https://nexusguard-web.onrender.com / https://nexusguard-api.onrender.com -
-      # Render's free-plan URL for a Blueprint service is always https://<name>.onrender.com,
-      # so these can be hardcoded instead of needing a cross-service reference.
+      # Custom domain (nexusscanner.com via GoDaddy, pointed at Render) - the onrender.com
+      # URLs still work underneath but are no longer what the browser actually shows.
       - key: Cors__AllowedOrigins__0
-        value: https://nexusguard-web.onrender.com
+        value: https://nexusscanner.com
+      - key: Cors__AllowedOrigins__1
+        value: https://www.nexusscanner.com
       - key: Dashboard__BaseUrl
-        value: https://nexusguard-web.onrender.com
+        value: https://nexusscanner.com
       - key: Discord__RedirectUri
-        value: https://nexusguard-api.onrender.com/api/auth/discord/callback
+        value: https://api.nexusscanner.com/api/auth/discord/callback
       - key: Google__RedirectUri
-        value: https://nexusguard-api.onrender.com/api/auth/google/callback
+        value: https://api.nexusscanner.com/api/auth/google/callback
       - key: Admin__BootstrapEmail
         sync: false
       - key: Discord__ClientId
@@ -66,4 +67,4 @@ services:
       # Docker build as --build-arg automatically, which is what the Dockerfile's
       # `ARG NEXT_PUBLIC_API_URL` picks up.
       - key: NEXT_PUBLIC_API_URL
-        value: https://nexusguard-api.onrender.com
+        value: https://api.nexusscanner.com
