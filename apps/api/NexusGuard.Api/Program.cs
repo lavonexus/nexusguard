@@ -7,6 +7,25 @@ using NexusGuard.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Constrained container hosts (Render, and similar) have a low inotify-instance limit that
+// appsettings.json's default file-watcher (for config hot-reload) can exceed on startup,
+// crashing with an unhandled IOException before the app ever binds a port - confirmed by an
+// actual failed deploy. Setting DOTNET_hostBuilder__reloadConfigOnChange doesn't reach this -
+// that only applies to the older Generic Host, not WebApplication.CreateBuilder's
+// ConfigurationManager - so the only fix is rebuilding the JSON sources by hand, in the same
+// order CreateBuilder already put them in, just without the watcher.
+// https://github.com/aspnet/MetaPackages/issues/282
+builder.Configuration.Sources.Clear();
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddCommandLine(args);
+
 // --- Database ---
 // Render's managed Postgres (and most other PaaS databases) hand back a postgres:// URI, not
 // the ADO.NET keyword=value string Npgsql expects. DATABASE_URL wins whenever it's present -
