@@ -1,0 +1,140 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using NexusGuard.Api.Auth;
+using NexusGuard.Api.DTOs;
+using NexusGuard.Api.Models;
+using NexusGuard.Api.Services;
+
+namespace NexusGuard.Api.Controllers;
+
+[ApiController]
+[Route("api/scanner")]
+public class ScannerController : ControllerBase
+{
+    private const int MaxFileBytes = 25 * 1024 * 1024;
+
+    private readonly IScanSessionService _scanSessions;
+    private readonly IDetectionEngine _detectionEngine;
+    private readonly IYaraScanEngine _yara;
+    private readonly IAiSummaryService _aiSummary;
+    private readonly IScannerThemeService _themes;
+
+    public ScannerController(
+        IScanSessionService scanSessions, IDetectionEngine detectionEngine, IYaraScanEngine yara,
+        IAiSummaryService aiSummary, IScannerThemeService themes)
+    {
+        _scanSessions = scanSessions;
+        _detectionEngine = detectionEngine;
+        _yara = yara;
+        _aiSummary = aiSummary;
+        _themes = themes;
+    }
+
+    // The only anonymous endpoint in this controller: Scanner.exe trades the human-entered
+    // PIN for a short-lived scan token. Everything below this point requires that token.
+    [HttpPost("session")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ScannerSessionResponse>> StartSession(ScannerSessionRequest request)
+    {
+        var result = await _scanSessions.ExchangePinAsync(request.ScanId, request.Pin);
+        if (result is null) return Unauthorized("Invalid, already-used, or expired PIN.");
+
+        var (session, scanToken) = result.Value;
+        var theme = await _themes.GetAsync(session.ServerId);
+        return new ScannerSessionResponse(scanToken, session.ScanTokenExpiresAt!.Value, theme);
+    }
+
+    // Same exchange as above, but for the Scanner.exe GUI, which only ever asks the player
+    // for a PIN - no scan ID to copy/paste. Scoped to Pending sessions only.
+    [HttpPost("session/by-pin")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ScannerSessionResponse>> StartSessionByPin(ScannerSessionByPinRequest request)
+    {
+        var result = await _scanSessions.ExchangePinOnlyAsync(request.Pin);
+        if (result is null) return Unauthorized("Invalid, already-used, or expired PIN.");
+
+        var (session, scanToken) = result.Value;
+        var theme = await _themes.GetAsync(session.ServerId);
+        return new ScannerSessionResponse(scanToken, session.ScanTokenExpiresAt!.Value, theme);
+    }
+
+    [HttpPost("heartbeat")]
+    [Authorize(AuthenticationSchemes = ScannerTokenAuthenticationOptions.SchemeName)]
+    public async Task<IActionResult> Heartbeat()
+    {
+        await _scanSessions.RecordHeartbeatAsync(CurrentSession);
+        return NoContent();
+    }
+
+    [HttpPost("results")]
+    [Authorize(AuthenticationSchemes = ScannerTokenAuthenticationOptions.SchemeName)]
+    public async Task<IActionResult> SubmitResult(ScannerResultRequest request)
+    {
+        if (!Enum.TryParse<ScanResultType>(request.ResultType, ignoreCase: true, out var type))
+            return BadRequest($"Unknown ResultType '{request.ResultType}'.");
+
+        if (string.IsNullOrWhiteSpace(request.DataJson))
+            return BadRequest("DataJson is required.");
+
+        await _scanSessions.AddResultAsync(CurrentSession, type, request.DataJson);
+        return NoContent();
+    }
+
+    // Phase 7: the scanner uploads a candidate file's raw bytes; YARA runs against them here
+    // and the file is deleted immediately after - only the match results (if any) are kept,
+    // as Detections, never the bytes themselves.
+    [HttpPost("files")]
+    [Authorize(AuthenticationSchemes = ScannerTokenAuthenticationOptions.SchemeName)]
+    public async Task<ActionResult<SubmitFileResponse>> SubmitFile(SubmitFileRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.FileName))
+            return BadRequest("FileName is required.");
+
+        byte[] content;
+        try
+        {
+            content = Convert.FromBase64String(request.ContentBase64);
+        }
+        catch (FormatException)
+        {
+            return BadRequest("ContentBase64 is not valid base64.");
+        }
+
+        if (content.Length == 0) return BadRequest("File content is empty.");
+        if (content.Length > MaxFileBytes) return BadRequest($"File exceeds the {MaxFileBytes / 1024 / 1024}MB limit.");
+
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            await System.IO.File.WriteAllBytesAsync(tempPath, content);
+            var matches = _yara.ScanFile(tempPath);
+
+            await _detectionEngine.RecordYaraDetectionsAsync(CurrentSession.Id, request.FileName, matches);
+            await _scanSessions.MarkInProgressAsync(CurrentSession);
+
+            return new SubmitFileResponse(matches.Count, matches.Select(m => m.RuleId).ToList());
+        }
+        finally
+        {
+            System.IO.File.Delete(tempPath);
+        }
+    }
+
+    // Phase 5: the scanner no longer gets a say in its own risk score. The Detection Engine
+    // evaluates every raw result already stored for this session against the server's own
+    // rules and that's what gets persisted - see DetectionEngine.EvaluateAsync.
+    //
+    // Phase 8: the Detection rows (not raw scanner output) also get turned into a short
+    // human-readable assessment - best-effort, never blocks completion if it fails.
+    [HttpPost("complete")]
+    [Authorize(AuthenticationSchemes = ScannerTokenAuthenticationOptions.SchemeName)]
+    public async Task<ActionResult<ScannerCompleteResponse>> Complete()
+    {
+        var (riskScore, detections) = await _detectionEngine.EvaluateAsync(CurrentSession.Id);
+        var summary = await _aiSummary.SummarizeAsync(CurrentSession.PlayerIdentifier, riskScore, detections);
+        await _scanSessions.CompleteAsync(CurrentSession, riskScore, summary);
+        return new ScannerCompleteResponse(riskScore, detections.Count);
+    }
+
+    private ScanSession CurrentSession => (ScanSession)HttpContext.Items["ScanSession"]!;
+}

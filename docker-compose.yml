@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexusguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexusguard
+      POSTGRES_USER: nexusguard
+      POSTGRES_PASSWORD: nexusguard_dev_pw
+    ports:
+      - "5432:5432"
+    volumes:
+      - nexusguard_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexusguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Not used yet (sessions/queue arrive with later phases) - included now so the
+  # compose file doesn't need to change shape later.
+  redis:
+    image: redis:7-alpine
+    container_name: nexusguard-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+volumes:
+  nexusguard_pg_data:

@@ -1,0 +1,181 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NexusGuard.Api.Auth;
+using NexusGuard.Api.Database;
+using NexusGuard.Api.DTOs;
+using NexusGuard.Api.Models;
+
+namespace NexusGuard.Api.Controllers;
+
+// Everything here is gated behind IsSiteAdmin, not any Server ownership - this is the site
+// owner's own control panel, reachable only by a dashboard session belonging to a user with
+// IsSiteAdmin = true (see RequireSiteAdminAsync). There is no self-serve checkout in
+// NexusGuard - a purchase happens over a Discord ticket, and granting/renewing a plan or
+// handing out site-admin access is a manual action taken here after that payment is confirmed.
+[ApiController]
+[Route("api/admin")]
+[Authorize(AuthenticationSchemes = DashboardSessionAuthenticationOptions.SchemeName)]
+public class AdminController : ControllerBase
+{
+    private static readonly string[] ValidPlans = ["Free", "Pro", "ProDuo", "Enterprise"];
+    private static readonly int[] ValidEnterpriseSeats = [5, 10, 15];
+
+    private readonly NexusGuardDbContext _db;
+
+    public AdminController(NexusGuardDbContext db) => _db = db;
+
+    [HttpGet("users")]
+    public async Task<ActionResult<List<AdminUserResponse>>> ListUsers([FromQuery] string? query)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var users = _db.Users.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var q = query.Trim().ToLower();
+            users = users.Where(u =>
+                u.Username.ToLower().Contains(q) ||
+                (u.Email != null && u.Email.ToLower().Contains(q)));
+        }
+
+        var result = await users
+            .OrderByDescending(u => u.CreatedAt)
+            .Take(200)
+            .Select(u => new AdminUserResponse(
+                u.Id, u.Username, u.DisplayName, u.Email,
+                u.DiscordId != null, u.GoogleId != null, u.IsSiteAdmin, u.CreatedAt))
+            .ToListAsync();
+
+        return result;
+    }
+
+    [HttpPost("site-admins")]
+    public async Task<ActionResult<AdminUserResponse>> SetSiteAdmin(AdminSetSiteAdminRequest request)
+    {
+        var (forbidden, caller) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        if (string.IsNullOrWhiteSpace(request.Username))
+            return BadRequest("Username is required.");
+
+        var user = await _db.Users.FirstOrDefaultAsync(
+            u => u.Username.ToLower() == request.Username.Trim().ToLower());
+        if (user is null) return NotFound("No NexusGuard user with that username.");
+
+        if (user.Id == caller!.Id && !request.IsSiteAdmin)
+            return BadRequest("You can't remove your own site admin access.");
+
+        user.IsSiteAdmin = request.IsSiteAdmin;
+        await _db.SaveChangesAsync();
+
+        return new AdminUserResponse(
+            user.Id, user.Username, user.DisplayName, user.Email,
+            user.DiscordId != null, user.GoogleId != null, user.IsSiteAdmin, user.CreatedAt);
+    }
+
+    [HttpGet("servers")]
+    public async Task<ActionResult<List<AdminServerResponse>>> ListServers([FromQuery] string? query)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var servers = _db.Servers.Include(s => s.Owner).AsQueryable();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var q = query.Trim().ToLower();
+            servers = servers.Where(s =>
+                s.Name.ToLower().Contains(q) ||
+                (s.Owner != null && s.Owner.Username.ToLower().Contains(q)));
+        }
+
+        var list = await servers.OrderByDescending(s => s.CreatedAt).Take(200).ToListAsync();
+        var memberCounts = await _db.ServerMembers
+            .Where(m => list.Select(s => s.Id).Contains(m.ServerId))
+            .GroupBy(m => m.ServerId)
+            .Select(g => new { ServerId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.ServerId, g => g.Count);
+
+        return list.Select(s => new AdminServerResponse(
+            s.Id, s.Name, s.OwnerUserId, s.Owner?.Username ?? "(bilinmiyor)",
+            s.EffectivePlan, s.EnterpriseSeats, s.PlanExpiresAt,
+            (memberCounts.TryGetValue(s.Id, out var c) ? c : 0) + 1, // +1 for the owner
+            s.CreatedAt)).ToList();
+    }
+
+    // The one place Server.Plan/EnterpriseSeats/PlanExpiresAt actually change - after a
+    // Discord-ticket purchase is confirmed, a site admin comes here and applies it by hand.
+    [HttpPost("servers/{id:guid}/plan")]
+    public async Task<ActionResult<AdminServerResponse>> SetPlan(Guid id, AdminSetPlanRequest request)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        if (!ValidPlans.Contains(request.Plan))
+            return BadRequest($"Plan must be one of: {string.Join(", ", ValidPlans)}.");
+
+        if (request.Plan == "Enterprise" && (request.EnterpriseSeats is null || !ValidEnterpriseSeats.Contains(request.EnterpriseSeats.Value)))
+            return BadRequest($"Enterprise plans require EnterpriseSeats to be one of: {string.Join(", ", ValidEnterpriseSeats)}.");
+
+        if (request.DurationDays is < 1)
+            return BadRequest("DurationDays must be positive, or omitted for an indefinite grant.");
+
+        var server = await _db.Servers.Include(s => s.Owner).FirstOrDefaultAsync(s => s.Id == id);
+        if (server is null) return NotFound();
+
+        server.Plan = request.Plan;
+        server.EnterpriseSeats = request.Plan == "Enterprise" ? request.EnterpriseSeats : null;
+        server.PlanExpiresAt = request.Plan == "Free"
+            ? null
+            : request.DurationDays.HasValue ? DateTime.UtcNow.AddDays(request.DurationDays.Value) : (DateTime?)null;
+
+        await _db.SaveChangesAsync();
+
+        return await ToAdminServerResponseAsync(server);
+    }
+
+    // A plan doesn't have to run its course - a refund, a chargeback, a ticket resolved in the
+    // customer's favor, or just a mistake all need this to take effect immediately rather than
+    // waiting for PlanExpiresAt. Distinct from SetPlan(Plan: "Free") only in that it's a single
+    // click with no form to fill in - same underlying effect either way.
+    [HttpPost("servers/{id:guid}/cancel-plan")]
+    public async Task<ActionResult<AdminServerResponse>> CancelPlan(Guid id)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var server = await _db.Servers.Include(s => s.Owner).FirstOrDefaultAsync(s => s.Id == id);
+        if (server is null) return NotFound();
+
+        server.Plan = "Free";
+        server.EnterpriseSeats = null;
+        server.PlanExpiresAt = null;
+
+        await _db.SaveChangesAsync();
+
+        return await ToAdminServerResponseAsync(server);
+    }
+
+    private async Task<AdminServerResponse> ToAdminServerResponseAsync(Server server)
+    {
+        var memberCount = await _db.ServerMembers.CountAsync(m => m.ServerId == server.Id);
+        return new AdminServerResponse(
+            server.Id, server.Name, server.OwnerUserId, server.Owner?.Username ?? "(bilinmiyor)",
+            server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt, memberCount + 1, server.CreatedAt);
+    }
+
+    // Always re-checked against the database rather than trusting a claim on the session
+    // cookie, so revoking IsSiteAdmin takes effect on the caller's very next request instead
+    // of only after their session expires.
+    private async Task<(ActionResult? Forbidden, User? Caller)> RequireSiteAdminAsync()
+    {
+        var claim = User.FindFirst(DashboardSessionClaimTypes.UserId)?.Value;
+        if (!Guid.TryParse(claim, out var userId)) return (Forbid(), null);
+
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null || !user.IsSiteAdmin) return (Forbid(), null);
+
+        return (null, user);
+    }
+}

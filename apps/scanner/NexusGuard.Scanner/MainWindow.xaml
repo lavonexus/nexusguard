@@ -1,0 +1,126 @@
+<Window x:Class="NexusGuard.Scanner.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NexusGuard Scanner" Height="360" Width="640"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
+        Icon="Assets/icon.ico"
+        Background="{DynamicResource BgBrush}" FontFamily="Segoe UI">
+    <Grid Margin="32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="180"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Logo mark, shared by every panel: a shield holding a small hub-and-node network
+             glyph, crossed by two signal bars - the NexusGuard mark. -->
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Viewbox x:Name="LogoVector" Width="76" Height="76" HorizontalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                    <Canvas.Effect>
+                        <DropShadowEffect Color="#8B5CF6" BlurRadius="20" ShadowDepth="0" Opacity="0.8"/>
+                    </Canvas.Effect>
+
+                    <Path Data="M12 2L4 5V11.09C4 16.14 7.41 20.85 12 22C16.59 20.85 20 16.14 20 11.09V5L12 2Z"
+                          Fill="{StaticResource ShieldFillBrush}" Stroke="White" StrokeThickness="0.5"
+                          StrokeLineJoin="Round"/>
+
+                    <Line X1="1.5" Y1="15.1" X2="22.5" Y2="15.1" Stroke="White" StrokeThickness="0.45" Opacity="0.9"/>
+                    <Line X1="1.5" Y1="16.5" X2="22.5" Y2="16.5" Stroke="White" StrokeThickness="0.45" Opacity="0.9"/>
+
+                    <Line X1="12" Y1="10.3" X2="12" Y2="6.9" Stroke="White" StrokeThickness="0.4"/>
+                    <Line X1="12" Y1="10.3" X2="8.9" Y2="8.7" Stroke="White" StrokeThickness="0.4"/>
+                    <Line X1="12" Y1="10.3" X2="15.1" Y2="8.7" Stroke="White" StrokeThickness="0.4"/>
+                    <Line X1="12" Y1="10.3" X2="9.1" Y2="12.6" Stroke="White" StrokeThickness="0.4"/>
+                    <Line X1="12" Y1="10.3" X2="14.9" Y2="12.6" Stroke="White" StrokeThickness="0.4"/>
+
+                    <Ellipse Canvas.Left="11.15" Canvas.Top="9.45" Width="1.7" Height="1.7" Fill="White"/>
+                    <Ellipse Canvas.Left="11.3" Canvas.Top="6.2" Width="1.4" Height="1.4" Fill="Transparent" Stroke="White" StrokeThickness="0.5"/>
+                    <Ellipse Canvas.Left="8.2" Canvas.Top="8" Width="1.4" Height="1.4" Fill="Transparent" Stroke="White" StrokeThickness="0.5"/>
+                    <Ellipse Canvas.Left="14.4" Canvas.Top="8" Width="1.4" Height="1.4" Fill="Transparent" Stroke="White" StrokeThickness="0.5"/>
+                    <Ellipse Canvas.Left="8.4" Canvas.Top="11.9" Width="1.4" Height="1.4" Fill="Transparent" Stroke="White" StrokeThickness="0.5"/>
+                    <Ellipse Canvas.Left="14.2" Canvas.Top="11.9" Width="1.4" Height="1.4" Fill="Transparent" Stroke="White" StrokeThickness="0.5"/>
+                </Canvas>
+            </Viewbox>
+            <Image x:Name="LogoImage" Width="76" Height="76" HorizontalAlignment="Center"
+                   Stretch="Uniform" Visibility="Collapsed"/>
+            <TextBlock Text="NexusGuard" FontSize="14" FontWeight="SemiBold" Margin="0,10,0,0"
+                       Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- PIN entry panel -->
+        <StackPanel x:Name="PinPanel" Grid.Column="1" VerticalAlignment="Center">
+            <TextBlock x:Name="PinTitleText" Text="Enter a PIN" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="PinSubtitleText" Text="Get this from whoever asked you to run a scan." FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center"
+                       Margin="0,4,0,20" TextWrapping="Wrap" TextAlignment="Center"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBox x:Name="Pin0" Style="{StaticResource PinBoxStyle}"/>
+                <TextBox x:Name="Pin1" Style="{StaticResource PinBoxStyle}"/>
+                <TextBox x:Name="Pin2" Style="{StaticResource PinBoxStyle}"/>
+                <TextBox x:Name="Pin3" Style="{StaticResource PinBoxStyle}"/>
+                <TextBox x:Name="Pin4" Style="{StaticResource PinBoxStyle}"/>
+                <TextBox x:Name="Pin5" Style="{StaticResource PinBoxStyle}"/>
+            </StackPanel>
+            <TextBlock Text="6 digits" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center" Margin="0,8,0,0"/>
+
+            <TextBlock x:Name="PinError" Foreground="{DynamicResource ErrorBrush}" FontSize="12"
+                       HorizontalAlignment="Center" Margin="0,14,0,0" TextWrapping="Wrap"
+                       TextAlignment="Center" Visibility="Collapsed"/>
+
+            <Button x:Name="ConnectButton" Content="Connect" Style="{StaticResource PrimaryButtonStyle}"
+                    Margin="0,20,0,0" IsEnabled="False" Click="ConnectButton_Click"/>
+        </StackPanel>
+
+        <!-- Scan progress panel -->
+        <StackPanel x:Name="ScanningPanel" Grid.Column="1" VerticalAlignment="Center" Visibility="Collapsed">
+            <TextBlock Text="Scanning your PC" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+            <TextBlock Text="Keep this window open until it finishes." FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center"
+                       Margin="0,4,0,24"/>
+
+            <ProgressBar x:Name="ScanProgressBar" Minimum="0" Maximum="100" Value="0"/>
+            <Grid Margin="0,8,0,0">
+                <TextBlock x:Name="StatusText" Text="Starting..." FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Left"
+                           TextWrapping="Wrap"/>
+                <TextBlock x:Name="PercentText" Text="0%" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource ProgressBrush}" HorizontalAlignment="Right"/>
+            </Grid>
+        </StackPanel>
+
+        <!-- Result panel - deliberately shows no risk score/detection info to the person
+             being scanned; that's for the server admin's dashboard only. -->
+        <StackPanel x:Name="DonePanel" Grid.Column="1" VerticalAlignment="Center" Visibility="Collapsed">
+            <Border Width="52" Height="52" CornerRadius="26" Background="#10B98133" HorizontalAlignment="Center">
+                <TextBlock Text="&#10003;" FontSize="24" FontWeight="Bold" Foreground="#10B981"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock x:Name="DoneTitleText" Text="Scan complete" FontSize="18" FontWeight="SemiBold" Margin="0,14,0,0"
+                       Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="DoneSubtitleText" Text="Thanks - the results have been sent to the server admin. You can close this window."
+                       FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center"
+                       TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" MaxWidth="320"/>
+            <Button Content="Close" Style="{StaticResource SecondaryButtonStyle}" Margin="0,20,0,0"
+                    Click="CloseButton_Click"/>
+        </StackPanel>
+
+        <!-- Failure panel -->
+        <StackPanel x:Name="FailedPanel" Grid.Column="1" VerticalAlignment="Center" Visibility="Collapsed">
+            <TextBlock Text="Scan failed" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="FailureText" Text="" FontSize="12" Foreground="{DynamicResource ErrorBrush}"
+                       HorizontalAlignment="Center" Margin="0,12,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
+            <Button Content="Try again" Style="{StaticResource PrimaryButtonStyle}" Margin="0,20,0,0"
+                    Click="RetryButton_Click"/>
+        </StackPanel>
+
+        <TextBlock x:Name="WatermarkText" Text="NexusGuard" FontSize="10" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.55"
+                   Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Margin="0,0,0,-24"/>
+    </Grid>
+</Window>

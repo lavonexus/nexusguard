@@ -1,0 +1,29 @@
+namespace NexusGuard.Api.DTOs;
+
+// OwnerUserId is only needed for the unauthenticated Phase 1 bootstrap flow - a logged-in
+// dashboard session (Phase 6) supplies the owner implicitly instead.
+public record CreateServerRequest(string Name, Guid? OwnerUserId = null);
+
+// ApiKey is only ever present in this one response - it cannot be retrieved again later,
+// only rotated via POST /api/servers/{id}/apikey.
+public record CreateServerResponse(Guid Id, string Name, string ApiKey);
+
+public record RotateApiKeyResponse(string ApiKey);
+
+public record ServerResponse(
+    Guid Id, string Name, DateTime CreatedAt, bool IsActive,
+    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt);
+
+public record ServerMemberResponse(Guid Id, Guid UserId, string Username, string Role, DateTime AddedAt);
+
+public record AddMemberRequest(string DiscordUsername);
+
+// Same shape as ServerResponse plus the caller's relationship to it - GET /api/servers/mine
+// unions owned and member servers, and the dashboard needs to tell them apart (only an
+// owner can rotate the key without it being a recovery action, manage billing, etc.).
+public record MyServerResponse(
+    Guid Id, string Name, DateTime CreatedAt, bool IsActive,
+    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt, string Role);
+
+// "Who scans the most" - Enterprise teams only, since it's meaningless with a single admin.
+public record LeaderboardEntryResponse(Guid UserId, string Username, int ScanCount, int DetectionCount);

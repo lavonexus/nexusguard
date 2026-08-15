@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>NexusGuard.Scanner</RootNamespace>
+    <AssemblyName>NexusGuard.Scanner</AssemblyName>
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <!-- Parent process id + full executable path for running processes, via WMI (Win32_Process) -
+         simpler and more reliable than P/Invoke NtQueryInformationProcess for this. -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
+    <!-- Read-only listing of .zip/.rar/.7z contents (never extracts/executes anything) -
+         the standard, widely-used library for this; System.IO.Compression only covers .zip. -->
+    <PackageReference Include="SharpCompress" Version="0.50.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Used both as the EXE's own Win32 resource icon (ApplicationIcon above) and, via this
+         explicit Resource entry, as the running window's title-bar/taskbar icon (Window.Icon
+         in MainWindow.xaml) - the two icon slots aren't wired together automatically. -->
+    <Resource Include="Assets\icon.ico" />
+  </ItemGroup>
+
+</Project>

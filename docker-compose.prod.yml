@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexusguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexusguard
+      POSTGRES_USER: nexusguard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - nexusguard_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexusguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published ports - only containers on this compose network (api) can reach Postgres.
+
+  api:
+    build:
+      context: ./apps/api/NexusGuard.Api
+    container_name: nexusguard-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=nexusguard;Username=nexusguard;Password=${POSTGRES_PASSWORD}
+      Cors__AllowedOrigins__0: https://${DOMAIN}
+      Dashboard__BaseUrl: https://${DOMAIN}
+      Discord__RedirectUri: https://${API_DOMAIN}/api/auth/discord/callback
+      Discord__ClientId: ${DISCORD_CLIENT_ID}
+      Discord__ClientSecret: ${DISCORD_CLIENT_SECRET}
+      Google__RedirectUri: https://${API_DOMAIN}/api/auth/google/callback
+      Google__ClientId: ${GOOGLE_CLIENT_ID}
+      Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY}
+      Admin__BootstrapEmail: ${ADMIN_BOOTSTRAP_EMAIL}
+    # No published ports - only Caddy (same compose network) reaches this. It's what
+    # Program.cs's ForwardedHeaders trust-everything setting relies on.
+
+  web:
+    build:
+      context: ./apps/web/nexusguard-dashboard
+      args:
+        # Baked into the client bundle at build time - must be the public API URL a browser
+        # can reach, not the Docker-internal "api" service name.
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
+    container_name: nexusguard-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    # No published ports - only Caddy reaches this.
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: nexusguard-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+
+volumes:
+  nexusguard_pg_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>nexusguard-api-secrets</UserSecretsId>
+    <RootNamespace>NexusGuard.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="dnYara" Version="2.1.0" />
+    <PackageReference Include="dnYara.NativePack" Version="2.1.0.1" GeneratePathProperty="true" />
+    <PackageReference Include="Anthropic" Version="12.40.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Yara\rules\*.yar" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- dnYara.NativePack ships libyara.dll under a legacy "content" folder that the SDK
+       doesn't auto-copy for net8.0 projects - $(PkgdnYara_NativePack) is the package's
+       install root, populated automatically by NuGet for any PackageReference. It ships a
+       Linux libyara.so right alongside the Windows .dll - .NET's own unmanaged-library probing
+       resolves DllImport("libyara") to libyara.so on Linux with no renaming needed, so copying
+       both lets the same build run on the Windows dev machine and a Linux container/VPS. -->
+  <ItemGroup>
+    <None Include="$(PkgdnYara_NativePack)\content\libyara.dll" CopyToOutputDirectory="PreserveNewest" Link="libyara.dll" />
+    <None Include="$(PkgdnYara_NativePack)\content\libyara.so" CopyToOutputDirectory="PreserveNewest" Link="libyara.so" />
+  </ItemGroup>
+
+</Project>

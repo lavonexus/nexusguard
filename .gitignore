@@ -1,0 +1,24 @@
+# Secrets - never commit real credentials.
+.env.prod
+.env
+.env.local
+
+# .NET
+bin/
+obj/
+publish/
+*.user
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+.claude/settings.local.json
