@@ -39,6 +39,24 @@ public class DetectionEngine : IDetectionEngine
         "menu", "cheat", "bypass", "unlock", "spoofer", "inject",
     };
 
+    // DLL-proxying (dropping a file named after a real Windows system DLL so the game loads it
+    // automatically, which then forwards calls through to the real one) is exactly how
+    // legitimate graphics/overlay tools like ReShade and ENB Series install themselves - not
+    // just how a cheat would. Flagging every DLL in FiveM's plugins folder without exception
+    // was wrong for the same reason the client-side scanner already avoids flagging dinput8.dll/
+    // dsound.dll/ScriptHook* by name alone: confirmed on a real install where dxgi.dll turned
+    // out to be crosire's actual, digitally-signed ReShade64.dll (FileDescription: "crosire's
+    // ReShade post-processing injector"), not a cheat. This is a name-only allowlist for the
+    // same reason the rest of this file is name-only for detections - it doesn't verify
+    // signature/publisher before excusing a name, because the point isn't "is this DLL good",
+    // it's "is this specific filename too common in legitimate installs to be evidence on its
+    // own" - same as never flagging dinput8.dll/dsound.dll as a cheat by name alone.
+    private static readonly HashSet<string> KnownGraphicsProxyDllNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "dxgi.dll", "d3d9.dll", "d3d10.dll", "d3d11.dll", "d3d12.dll",
+        "dinput8.dll", "dsound.dll", "opengl32.dll", "winmm.dll", "version.dll",
+    };
+
     // Starter list, same spirit as the YARA rules: illustrative known-bad RPF replacement
     // names an admin can extend, not a real external threat-intel feed. Matched by filename
     // only for now - a hash allowlist/denylist is the obvious next step once real samples are
@@ -187,7 +205,7 @@ public class DetectionEngine : IDetectionEngine
         var detections = new List<Detection>();
         foreach (var fact in Deserialize<FiveMArtifactFact>(dataJson))
         {
-            if (fact.InPluginsDir)
+            if (fact.InPluginsDir && !KnownGraphicsProxyDllNames.Contains(fact.Name))
             {
                 detections.Add(NewDetection(sessionId, "fivem-plugin-dll", 25,
                     $"DLL '{fact.Name}' present in FiveM's plugins folder - loads directly into the client.",
