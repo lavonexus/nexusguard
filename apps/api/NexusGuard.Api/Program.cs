@@ -8,8 +8,26 @@ using NexusGuard.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Database ---
+// Render's managed Postgres (and most other PaaS databases) hand back a postgres:// URI, not
+// the ADO.NET keyword=value string Npgsql expects - ConnectionStrings:Default (appsettings /
+// docker-compose) always wins when set; DATABASE_URL is only parsed as a fallback for hosts
+// that only offer the URI form.
+var connectionString = builder.Configuration.GetConnectionString("Default");
+if (string.IsNullOrEmpty(connectionString))
+{
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        connectionString =
+            $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+            $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    }
+}
+
 builder.Services.AddDbContext<NexusGuardDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    options.UseNpgsql(connectionString));
 
 // --- Domain services ---
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -115,5 +133,9 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Unauthenticated on purpose - this is only ever polled by the hosting platform's own health
+// checker (Render, etc.), never by a browser or the dashboard.
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.Run();

@@ -1,0 +1,61 @@
+# Render Blueprint - "New +" > "Blueprint" > pick this repo, Render reads this file and
+# creates the database and both services in one go. Values marked "sync: false" are secrets
+# that are never committed here - Render prompts for them once, in its own dashboard, at
+# deploy time.
+databases:
+  - name: nexusguard-db
+    databaseName: nexusguard
+    user: nexusguard
+    plan: free
+
+services:
+  - type: web
+    name: nexusguard-api
+    runtime: docker
+    dockerfilePath: ./apps/api/NexusGuard.Api/Dockerfile
+    dockerContext: ./apps/api/NexusGuard.Api
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nexusguard-db
+          property: connectionString
+      # Fixed https://nexusguard-web.onrender.com / https://nexusguard-api.onrender.com -
+      # Render's free-plan URL for a Blueprint service is always https://<name>.onrender.com,
+      # so these can be hardcoded instead of needing a cross-service reference.
+      - key: Cors__AllowedOrigins__0
+        value: https://nexusguard-web.onrender.com
+      - key: Dashboard__BaseUrl
+        value: https://nexusguard-web.onrender.com
+      - key: Discord__RedirectUri
+        value: https://nexusguard-api.onrender.com/api/auth/discord/callback
+      - key: Google__RedirectUri
+        value: https://nexusguard-api.onrender.com/api/auth/google/callback
+      - key: Admin__BootstrapEmail
+        sync: false
+      - key: Discord__ClientId
+        sync: false
+      - key: Discord__ClientSecret
+        sync: false
+      - key: Google__ClientId
+        sync: false
+      - key: Google__ClientSecret
+        sync: false
+      - key: Anthropic__ApiKey
+        sync: false
+
+  - type: web
+    name: nexusguard-web
+    runtime: docker
+    dockerfilePath: ./apps/web/nexusguard-dashboard/Dockerfile
+    dockerContext: ./apps/web/nexusguard-dashboard
+    plan: free
+    envVars:
+      # Baked into the client bundle at build time - Render forwards service env vars to the
+      # Docker build as --build-arg automatically, which is what the Dockerfile's
+      # `ARG NEXT_PUBLIC_API_URL` picks up.
+      - key: NEXT_PUBLIC_API_URL
+        value: https://nexusguard-api.onrender.com
