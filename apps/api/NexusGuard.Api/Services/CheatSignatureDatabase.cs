@@ -95,4 +95,22 @@ public static class CheatSignatureDatabase
     // real install flagging that exact file before this list was narrowed.
     public static readonly string[] SuspiciousLuaKeywords =
         { "exec", "inject", "bypass", "cheat", "spoof" };
+
+    // Real, hash-identified samples - the "obvious next step" the DetectionEngine comment on
+    // IllegalRpfNames calls out (a cheat can trivially rename a file to dodge every check above,
+    // but not change its own bytes without becoming a different sample). This is the only place
+    // in the whole engine allowed to earn "Confirmed" confidence on its own, with no correlation
+    // or second signal required - see DetectionEngine.ApplyCorrelationBoost's comment on why
+    // nothing else may reach it.
+    public static readonly Dictionary<string, (string Name, string Category)> KnownBadFileHashes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            // FiveM "Silence" cracked cheat DLL (ImGui/DX11 overlay, vehicle-lock features),
+            // downloaded via a Discord CDN attachment link, found on the user's own Desktop as
+            // "Silence_Cracked.dll" and hash-verified on 2026-08-16. Static string analysis
+            // found no ransomware/stealer payload, but confirmed it's an unsigned, stripped
+            // game-cheat overlay - not something a legitimate install would ever ship.
+            ["8F7D38A91B7FB31FE66321F88F30CAB45136BC2B94232E1E0AC8848D097F1F88"] =
+                ("Silence (Cracked FiveM Cheat)", "CHEAT"),
+        };
 }

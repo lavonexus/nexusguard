@@ -315,6 +315,21 @@ public class DetectionEngine : IDetectionEngine
                 continue;
             }
 
+            // An exact hash match against a real, hash-identified sample - the only detection
+            // in this engine allowed straight to "Confirmed" with no correlation needed, since
+            // renaming or moving the file can't change what it actually is.
+            if (fact.Sha256 is not null &&
+                CheatSignatureDatabase.KnownBadFileHashes.TryGetValue(fact.Sha256, out var knownBad))
+            {
+                detections.Add(NewDetection(
+                    sessionId, $"known-hash:{knownBad.Category.ToLowerInvariant()}", 60,
+                    $"Dosya '{fact.Name}' bilinen kötü amaçlı örnek '{knownBad.Name}' ile SHA256 eşleşmesi gösteriyor.",
+                    fact.Path, category: knownBad.Category, status: "Active", confidence: "Confirmed",
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed,
+                    firstSeenUtc: fact.CreatedUtc, lastModifiedUtc: fact.ModifiedUtc));
+                continue;
+            }
+
             var sig = CheatSignatureDatabase.Match(fact.Name) ?? CheatSignatureDatabase.Match(fact.Path);
             if (sig is null) continue;
 
