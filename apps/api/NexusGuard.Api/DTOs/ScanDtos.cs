@@ -21,7 +21,10 @@ public record ScanSessionResponse(
 
 public record ScanResultSummaryResponse(Guid Id, string ResultType, string DataJson, DateTime CreatedAt);
 
-public record DetectionResponse(Guid Id, string RuleId, string Description, int Weight, string Evidence, DateTime CreatedAt);
+public record DetectionResponse(
+    Guid Id, string RuleId, string Description, int Weight, string Evidence, DateTime CreatedAt,
+    string Category, string Status, string Confidence,
+    string? Sha256, string? Publisher, bool? Signed, DateTime? FirstSeenUtc, DateTime? LastModifiedUtc);
 
 public record ScanSessionDetailResponse(
     ScanSessionResponse Session,

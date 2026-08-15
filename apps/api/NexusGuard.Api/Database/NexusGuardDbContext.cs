@@ -82,6 +82,10 @@ public class NexusGuardDbContext : DbContext
             e.Property(d => d.RuleId).IsRequired().HasMaxLength(64);
             e.Property(d => d.Description).IsRequired();
             e.Property(d => d.Evidence).HasMaxLength(1024);
+            e.Property(d => d.Category).IsRequired().HasMaxLength(32).HasDefaultValue("OTHER");
+            e.Property(d => d.Status).IsRequired().HasMaxLength(16).HasDefaultValue("Active");
+            e.Property(d => d.Confidence).IsRequired().HasMaxLength(16).HasDefaultValue("Medium");
+            e.Property(d => d.Publisher).HasMaxLength(256);
             e.HasOne(d => d.ScanSession)
                 .WithMany(s => s.Detections)
                 .HasForeignKey(d => d.ScanSessionId)

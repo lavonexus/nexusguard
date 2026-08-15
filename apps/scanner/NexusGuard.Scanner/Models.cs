@@ -67,5 +67,13 @@ public record SystemFact(
     string OsVersion, string MachineName, bool FiveMProcessFound,
     DateTime? WindowsInstallDate, string? RegionCountry);
 
+// Windows' own installed-application record (Uninstall registry keys) - ExecutablePathExists
+// is the one opinion-adjacent field here, but it's still just a raw fact ("does this path
+// exist right now"), not a judgment about whether the entry is suspicious. The server's
+// Detection Engine is what decides that, same as everywhere else.
+public record InstalledApplicationFact(
+    string DisplayName, string? Publisher, string? DisplayVersion, string? InstallLocation,
+    DateTime? InstallDate, string? UninstallString, bool ExecutablePathExists);
+
 // Drives the GUI progress bar - percent complete plus a short human-readable status line.
 public record ScanProgress(int Percent, string Status);

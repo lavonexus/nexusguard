@@ -101,7 +101,9 @@ public class ScansController : ControllerBase
 
         var detections = session.Detections
             .OrderByDescending(d => d.Weight)
-            .Select(d => new DetectionResponse(d.Id, d.RuleId, d.Description, d.Weight, d.Evidence, d.CreatedAt))
+            .Select(d => new DetectionResponse(
+                d.Id, d.RuleId, d.Description, d.Weight, d.Evidence, d.CreatedAt,
+                d.Category, d.Status, d.Confidence, d.Sha256, d.Publisher, d.Signed, d.FirstSeenUtc, d.LastModifiedUtc))
             .ToList();
 
         return new ScanSessionDetailResponse(ToResponse(session), results, detections);

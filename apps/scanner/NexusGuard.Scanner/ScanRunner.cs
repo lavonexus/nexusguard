@@ -77,6 +77,13 @@ public static class ScanRunner
             await Report(api, scanToken, "Service", serviceFacts);
         }
 
+        progress.Report(new ScanProgress(43, "Checking installed application history..."));
+        var installedAppFacts = InstalledApplicationsScanner.Scan();
+        if (installedAppFacts.Count > 0)
+        {
+            await Report(api, scanToken, "InstalledApplication", installedAppFacts);
+        }
+
         progress.Report(new ScanProgress(45, "Scanning FiveM, GTA V, and Windows user directories..."));
         var extendedFacts = ExtendedFileScanner.Scan();
         if (extendedFacts.Count > 0)

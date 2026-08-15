@@ -122,6 +122,24 @@ export interface ScanResultSummaryResponse {
   createdAt: string;
 }
 
+export type DetectionCategory =
+  | "CHEAT"
+  | "INJECTOR"
+  | "LUA"
+  | "LOADER"
+  | "MAPPER"
+  | "SUSPICIOUS DLL"
+  | "SUSPICIOUS DRIVER"
+  | "CLEANER"
+  | "HISTORICAL ARTIFACT"
+  | "SUSPICIOUS APPLICATION"
+  | "SUSPICIOUS PROCESS"
+  | "OTHER"
+  | string;
+
+export type DetectionStatus = "Active" | "Historical" | "Removed" | "Unknown" | string;
+export type DetectionConfidence = "Low" | "Medium" | "High" | "Confirmed" | string;
+
 export interface DetectionResponse {
   id: string;
   ruleId: string;
@@ -129,6 +147,14 @@ export interface DetectionResponse {
   weight: number;
   evidence: string;
   createdAt: string;
+  category: DetectionCategory;
+  status: DetectionStatus;
+  confidence: DetectionConfidence;
+  sha256: string | null;
+  publisher: string | null;
+  signed: boolean | null;
+  firstSeenUtc: string | null;
+  lastModifiedUtc: string | null;
 }
 
 export interface ScanSessionDetailResponse {

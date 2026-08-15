@@ -26,5 +26,6 @@ public enum ScanResultType
     FileEvidence,
     Autostart,
     ScheduledTask,
-    Service
+    Service,
+    InstalledApplication
 }

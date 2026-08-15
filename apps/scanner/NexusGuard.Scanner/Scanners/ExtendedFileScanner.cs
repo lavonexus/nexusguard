@@ -10,14 +10,18 @@ namespace NexusGuard.Scanner.Scanners;
 // components (dinput8.dll, ScriptHookV, ...) that are legitimate on almost every install.
 public static class ExtendedFileScanner
 {
+    // .lua/.luac included everywhere alongside the executable types - a Lua executor/injector
+    // drops a script file, not a binary, and the server's Detection Engine only ever scores a
+    // narrow, keyword-matched subset of these (see CheatSignatureDatabase.SuspiciousLuaKeywords)
+    // since a normal FiveM install legitimately has thousands of ordinary resource scripts.
     private static readonly HashSet<string> CodeExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".exe", ".dll", ".sys", ".asi" };
+        { ".exe", ".dll", ".sys", ".asi", ".lua", ".luac" };
 
     private static readonly HashSet<string> WindowsDirExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".exe", ".dll", ".sys", ".asi", ".bat", ".cmd", ".ps1" };
+        { ".exe", ".dll", ".sys", ".asi", ".bat", ".cmd", ".ps1", ".lua", ".luac" };
 
     private static readonly HashSet<string> UserDirExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".exe", ".dll", ".sys", ".asi", ".bat", ".cmd", ".ps1", ".zip", ".rar", ".7z" };
+        { ".exe", ".dll", ".sys", ".asi", ".bat", ".cmd", ".ps1", ".lua", ".luac", ".zip", ".rar", ".7z" };
 
     private static readonly HashSet<string> ArchiveExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".zip", ".rar", ".7z" };
