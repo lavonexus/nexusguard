@@ -124,6 +124,13 @@ public class AdminController : ControllerBase
         var server = await _db.Servers.Include(s => s.Owner).FirstOrDefaultAsync(s => s.Id == id);
         if (server is null) return NotFound();
 
+        // A fresh Enterprise grant sends the owner through a one-time "name your server"
+        // screen on their next login, instead of the auto-generated placeholder a Free signup
+        // gets silently - re-saving an already-Enterprise server (e.g. changing seat count)
+        // doesn't re-trigger it.
+        if (request.Plan == "Enterprise" && server.Plan != "Enterprise")
+            server.NeedsSetup = true;
+
         server.Plan = request.Plan;
         server.EnterpriseSeats = request.Plan == "Enterprise" ? request.EnterpriseSeats : null;
         server.PlanExpiresAt = request.Plan == "Free"

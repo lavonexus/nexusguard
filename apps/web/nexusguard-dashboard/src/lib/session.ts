@@ -28,6 +28,12 @@ export function updateApiKey(apiKey: string) {
   saveSession({ ...current, apiKey });
 }
 
+export function updateServerName(serverName: string) {
+  const current = loadSession();
+  if (!current) return;
+  saveSession({ ...current, serverName });
+}
+
 export function clearSession() {
   window.localStorage.removeItem(STORAGE_KEY);
 }

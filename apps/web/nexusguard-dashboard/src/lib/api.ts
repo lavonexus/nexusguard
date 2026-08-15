@@ -73,6 +73,7 @@ export interface ServerResponse {
   plan: Plan;
   enterpriseSeats: number | null;
   planExpiresAt: string | null;
+  needsSetup: boolean;
 }
 
 export interface ServerMemberResponse {
@@ -166,6 +167,25 @@ export function createServerForCurrentUser(name: string) {
 export function getServer(apiKey: string, id: string) {
   return request<ServerResponse>(`/api/servers/${id}`, {
     headers: { "X-Api-Key": apiKey },
+  });
+}
+
+// Owner-only. Also clears NeedsSetup - this is the one action that marks a fresh Enterprise
+// grant's onboarding screen as complete.
+export function renameServer(apiKey: string, id: string, name: string) {
+  return request<ServerResponse>(`/api/servers/${id}`, {
+    method: "PATCH",
+    headers: { "X-Api-Key": apiKey },
+    body: JSON.stringify({ name }),
+  });
+}
+
+// Same as renameServer, but authenticated by the dashboard session cookie instead of an API
+// key - used right after login, before the browser has a locally-stored key for this server.
+export function renameServerAsOwner(id: string, name: string) {
+  return sessionRequest<ServerResponse>(`/api/servers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
   });
 }
 

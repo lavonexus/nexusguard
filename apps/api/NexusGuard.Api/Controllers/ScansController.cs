@@ -35,16 +35,18 @@ public class ScansController : ControllerBase
         if (server is null) return NotFound();
 
         // Free plan (including an expired paid grant - see Server.EffectivePlan) is capped at
-        // one scan per calendar day (UTC). Paid plans have no scan-count limit of their own.
+        // one scan per rolling 24 hours since their last scan, not a calendar-day reset - a
+        // scan at 23:50 and another at 00:10 the same "day" would otherwise both be allowed.
+        // Paid plans have no scan-count limit of their own.
         if (server.EffectivePlan == "Free")
         {
-            var todayStartUtc = DateTime.UtcNow.Date;
-            var scansToday = await _db.ScanSessions.CountAsync(
-                s => s.ServerId == serverId && s.CreatedAt >= todayStartUtc);
-            if (scansToday >= 1)
+            var windowStartUtc = DateTime.UtcNow.AddHours(-24);
+            var scansInWindow = await _db.ScanSessions.CountAsync(
+                s => s.ServerId == serverId && s.CreatedAt >= windowStartUtc);
+            if (scansInWindow >= 1)
             {
                 return StatusCode(StatusCodes.Status429TooManyRequests,
-                    "Free planda günde 1 tarama hakkınız var. Daha fazla tarama için bir paket satın alın (Discord: https://discord.gg/nexusguard).");
+                    "Free planda 24 saatte 1 tarama hakkınız var. Daha fazla tarama için bir paket satın alın (Discord: https://discord.gg/nexusguard).");
             }
         }
 

@@ -12,7 +12,7 @@ public record RotateApiKeyResponse(string ApiKey);
 
 public record ServerResponse(
     Guid Id, string Name, DateTime CreatedAt, bool IsActive,
-    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt);
+    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt, bool NeedsSetup);
 
 public record ServerMemberResponse(Guid Id, Guid UserId, string Username, string Role, DateTime AddedAt);
 
@@ -23,7 +23,9 @@ public record AddMemberRequest(string DiscordUsername);
 // owner can rotate the key without it being a recovery action, manage billing, etc.).
 public record MyServerResponse(
     Guid Id, string Name, DateTime CreatedAt, bool IsActive,
-    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt, string Role);
+    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt, bool NeedsSetup, string Role);
+
+public record RenameServerRequest(string Name);
 
 // "Who scans the most" - Enterprise teams only, since it's meaningless with a single admin.
 public record LeaderboardEntryResponse(Guid UserId, string Username, int ScanCount, int DetectionCount);

@@ -54,8 +54,10 @@ export default function ActivityChart({ points }: { points: ActivityPoint[] }) {
           </linearGradient>
         </defs>
 
-        {yTicks.map((t) => (
-          <g key={t}>
+        {yTicks.map((t, i) => (
+          // Index, not value - max defaults to 1 with no data yet, so the 0/0.5/1 fractions
+          // can round to the same tick value (e.g. [0, 1, 1]) and collide on a value-based key.
+          <g key={i}>
             <line
               x1={padding.left}
               x2={width - padding.right}

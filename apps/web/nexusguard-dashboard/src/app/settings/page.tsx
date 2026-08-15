@@ -8,12 +8,13 @@ import {
   getCurrentUser,
   getServer,
   logout,
+  renameServer,
   rotateApiKey,
   updateDisplayName,
   type ServerResponse,
   type UserResponse,
 } from "@/lib/api";
-import { clearSession, loadSession, updateApiKey, type ServerSession } from "@/lib/session";
+import { clearSession, loadSession, updateApiKey, updateServerName, type ServerSession } from "@/lib/session";
 
 type Tab = "account" | "server";
 
@@ -156,7 +157,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {tab === "server" && session && <ServerTab session={session} server={server} />}
+      {tab === "server" && session && <ServerTab session={session} server={server} onRenamed={setServer} />}
     </div>
   );
 }
@@ -238,12 +239,25 @@ function AccountForm({ user, onUpdated }: { user: UserResponse; onUpdated: (u: U
   );
 }
 
-function ServerTab({ session, server }: { session: ServerSession; server: ServerResponse | null }) {
+function ServerTab({
+  session,
+  server,
+  onRenamed,
+}: {
+  session: ServerSession;
+  server: ServerResponse | null;
+  onRenamed: (server: ServerResponse) => void;
+}) {
   const [rotating, setRotating] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(server?.name ?? session.serverName);
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   async function handleRotate() {
     setRotating(true);
@@ -267,10 +281,72 @@ function ServerTab({ session, server }: { session: ServerSession; server: Server
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function handleRename() {
+    if (!nameDraft.trim()) {
+      setRenameError("Sunucu adı gerekli.");
+      return;
+    }
+    setRenaming(true);
+    setRenameError(null);
+    try {
+      const updated = await renameServer(session.apiKey, session.serverId, nameDraft.trim());
+      updateServerName(updated.name);
+      onRenamed(updated);
+      setEditingName(false);
+    } catch (err) {
+      setRenameError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   return (
     <div className="mt-6 max-w-lg">
       <div className="space-y-4 rounded-lg border border-zinc-800 p-4">
-        <Field label="Sunucu adı" value={server?.name ?? session.serverName} />
+        {editingName ? (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-zinc-500">Sunucu adı</span>
+            <div className="flex items-center gap-2">
+              <input
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                autoFocus
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200 outline-none focus:border-violet-600"
+              />
+              <button
+                onClick={handleRename}
+                disabled={renaming}
+                className="rounded-md bg-violet-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+              >
+                {renaming ? "..." : "Kaydet"}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingName(false);
+                  setNameDraft(server?.name ?? session.serverName);
+                  setRenameError(null);
+                }}
+                className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-zinc-600"
+              >
+                Vazgeç
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-zinc-500">Sunucu adı</span>
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-200">{server?.name ?? session.serverName}</span>
+              <button
+                onClick={() => setEditingName(true)}
+                className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+              >
+                Düzenle
+              </button>
+            </div>
+          </div>
+        )}
+        {renameError && <p className="text-xs text-red-400">{renameError}</p>}
         <Field label="Sunucu ID" value={session.serverId} mono />
         <Field label="Durum" value={server ? (server.isActive ? "Aktif" : "Pasif") : "—"} />
         <Field label="Kayıt tarihi" value={server ? new Date(server.createdAt).toLocaleString("tr-TR") : "—"} />

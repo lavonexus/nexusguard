@@ -61,6 +61,29 @@ public class ServersController : ControllerBase
             new CreateServerResponse(server.Id, server.Name, apiKey));
     }
 
+    // Renames a server and, if it was pending a post-Enterprise-grant setup screen, clears
+    // that flag - this is the only action that can clear NeedsSetup, so the dashboard can rely
+    // on "they've renamed it" as "they've completed onboarding" without a separate flag flip.
+    [HttpPatch("{id:guid}")]
+    [Authorize(AuthenticationSchemes = OwnerSchemes)]
+    public async Task<ActionResult<ServerResponse>> Rename(Guid id, RenameServerRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("Name is required.");
+        if (request.Name.Length > 128)
+            return BadRequest("Name must be 128 characters or fewer.");
+
+        var server = await _db.Servers.FindAsync(id);
+        if (server is null) return NotFound();
+        if (!await CallerOwnsServerAsync(server)) return Forbid();
+
+        server.Name = request.Name.Trim();
+        server.NeedsSetup = false;
+        await _db.SaveChangesAsync();
+
+        return ToServerResponse(server);
+    }
+
     // Every server the logged-in Discord/Google user owns OR is a team member of - lets the
     // dashboard show servers whose API key isn't sitting in this browser's local storage
     // (a different machine, one created before this login existed, or one someone else owns
@@ -250,6 +273,13 @@ public class ServersController : ControllerBase
         if (server is null) return NotFound();
         if (!await CallerCanAccessServerAsync(server)) return Forbid();
 
+        // Tool Designer stays fully browsable/editable on Free so people can see what they'd
+        // get - only the actual save (and therefore anything reaching the real Scanner.exe
+        // players run) requires a paid plan.
+        if (server.EffectivePlan == "Free")
+            return StatusCode(StatusCodes.Status402PaymentRequired,
+                "Tool Designer değişikliklerini kaydetmek için Free planın yeterli değil - PRO ya da üstü bir plana geçmen gerekiyor.");
+
         try
         {
             return await _themes.UpdateAsync(id, request);
@@ -283,11 +313,11 @@ public class ServersController : ControllerBase
 
     private static ServerResponse ToServerResponse(Server server) => new(
         server.Id, server.Name, server.CreatedAt, server.IsActive,
-        server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt);
+        server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt, server.NeedsSetup);
 
     private static MyServerResponse ToMyServerResponse(Server server, string role) => new(
         server.Id, server.Name, server.CreatedAt, server.IsActive,
-        server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt, role);
+        server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt, server.NeedsSetup, role);
 
     private async Task<Guid?> ResolveSessionUserIdAsync()
     {

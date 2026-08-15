@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   ApiError,
   DISCORD_LOGIN_URL,
@@ -9,6 +9,7 @@ import {
   createServerForCurrentUser,
   getCurrentUser,
   listMyServers,
+  renameServerAsOwner,
   rotateApiKeyAsOwner,
   type MyServerResponse,
   type UserResponse,
@@ -43,15 +44,43 @@ function SetupPageContent() {
     null
   );
   const [copied, setCopied] = useState(false);
+  // First-ever login (zero servers) provisions one silently and skips this page entirely -
+  // this flag just keeps the "yükleniyor" state up while that happens instead of flashing the
+  // server list first.
+  const [autoProvisioning, setAutoProvisioning] = useState(false);
+  // React StrictMode double-invokes effects in dev (mount → unmount → mount) specifically to
+  // surface non-idempotent side effects like this one - without this guard, a brand-new user
+  // would get two servers auto-created from a single page load. A ref (not state) survives
+  // that unmount/remount cycle without itself triggering a re-render.
+  const provisionStarted = useRef(false);
 
   useEffect(() => {
+    let currentUser: UserResponse | null = null;
+
     getCurrentUser()
       .then((u) => {
+        currentUser = u;
         setUser(u);
         setAuthState("signed-in");
         return listMyServers();
       })
-      .then(setServers)
+      .then(async (list) => {
+        if (list.length === 0) {
+          if (provisionStarted.current) return;
+          provisionStarted.current = true;
+          setAutoProvisioning(true);
+          const server = await createServerForCurrentUser("FiveM Sunucum");
+          saveSession({
+            userId: currentUser!.id,
+            serverId: server.id,
+            serverName: server.name,
+            apiKey: server.apiKey,
+          });
+          router.replace("/overview");
+          return;
+        }
+        setServers(list);
+      })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 401) {
           setAuthState("signed-out");
@@ -60,6 +89,7 @@ function SetupPageContent() {
           setAuthState("signed-out");
         }
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleContinue() {
@@ -80,7 +110,7 @@ function SetupPageContent() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (authState === "checking") {
+  if (authState === "checking" || autoProvisioning) {
     return <p className="mt-6 text-center text-sm text-zinc-500">Yükleniyor...</p>;
   }
 
@@ -165,6 +195,13 @@ function SetupPageContent() {
     );
   }
 
+  // A fresh Enterprise grant gets a focused, single-purpose screen instead of the general
+  // server list - naming their server is the one thing standing between them and the panel.
+  const soloServer = servers?.length === 1 ? servers[0] : null;
+  if (soloServer && soloServer.role === "Owner" && soloServer.needsSetup) {
+    return <EnterpriseOnboarding server={soloServer} onReady={setRevealed} />;
+  }
+
   return (
     <div className="mx-auto max-w-md">
       <h1 className="text-xl font-semibold text-white">Hoş geldin, {user?.username}</h1>
@@ -183,6 +220,68 @@ function SetupPageContent() {
       <div className="mt-6 border-t border-zinc-800 pt-6">
         <NewServerForm onReady={setRevealed} />
       </div>
+    </div>
+  );
+}
+
+function EnterpriseOnboarding({
+  server,
+  onReady,
+}: {
+  server: MyServerResponse;
+  onReady: (server: { id: string; name: string; apiKey: string }) => void;
+}) {
+  const [name, setName] = useState(server.name);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Sunucu adı gerekli.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const renamed = await renameServerAsOwner(server.id, name.trim());
+      const { apiKey } = await rotateApiKeyAsOwner(server.id);
+      onReady({ id: renamed.id, name: renamed.name, apiKey });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-md">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-800 bg-violet-950/50 px-2.5 py-1 text-xs font-medium text-violet-300">
+        ✦ Enterprise&apos;a hoş geldin
+      </span>
+      <h1 className="mt-3 text-xl font-semibold text-white">Sunucuna bir isim ver</h1>
+      <p className="mt-1 text-sm text-zinc-400">
+        Ekibinin panelde göreceği asıl sunucu adını gir - istediğin zaman Ayarlar&apos;dan
+        değiştirebilirsin.
+      </p>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
+          placeholder="Sunucu adı"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? "Kaydediliyor..." : "Kaydet ve Panele Eriş"}
+        </button>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+      </form>
     </div>
   );
 }

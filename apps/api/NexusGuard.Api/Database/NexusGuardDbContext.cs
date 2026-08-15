@@ -31,6 +31,7 @@ public class NexusGuardDbContext : DbContext
             e.HasIndex(s => s.ApiKeyPrefix).IsUnique();
             e.Property(s => s.Name).IsRequired().HasMaxLength(128);
             e.Property(s => s.Plan).IsRequired().HasMaxLength(16).HasDefaultValue("Free");
+            e.Property(s => s.NeedsSetup).HasDefaultValue(false);
             e.HasOne(s => s.Owner)
                 .WithMany(u => u.Servers)
                 .HasForeignKey(s => s.OwnerUserId)

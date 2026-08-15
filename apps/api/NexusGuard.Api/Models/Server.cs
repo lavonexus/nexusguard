@@ -33,6 +33,12 @@ public class Server
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
 
+    // True right after a site admin grants this server Enterprise for the first time - the
+    // owner gets a one-time "name your server" screen before reaching the dashboard, instead
+    // of the auto-generated placeholder name a Free signup gets silently. Cleared the moment
+    // they rename (or otherwise confirm) via PATCH /api/servers/{id}.
+    public bool NeedsSetup { get; set; } = false;
+
     // Not mapped (no setter) - EF Core skips read-only properties by convention. Every plan
     // check in the codebase should read this, never Plan directly, so an expired grant can't
     // be missed anywhere.

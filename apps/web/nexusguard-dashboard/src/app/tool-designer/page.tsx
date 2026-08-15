@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, getScannerTheme, updateScannerTheme, type ScannerTheme } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
@@ -41,13 +42,14 @@ type Tab = "palette" | "labels" | "branding" | "options";
 
 export default function ToolDesignerPage() {
   const router = useRouter();
-  const { session, loading } = useServerContext();
+  const { session, server, loading } = useServerContext();
   const [theme, setTheme] = useState<ScannerTheme | null>(null);
   const [tab, setTab] = useState<Tab>("palette");
   const [previewStage, setPreviewStage] = useState<StageKey>("pin");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradePrompt, setUpgradePrompt] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -68,13 +70,21 @@ export default function ToolDesignerPage() {
     if (!session || !theme) return;
     setSaving(true);
     setError(null);
+    setUpgradePrompt(false);
     try {
       const updated = await updateScannerTheme(session.apiKey, session.serverId, theme);
       setTheme(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      // 402 is the API's own gate (Free plan can view/edit here, just not persist it) - the
+      // dashboard's own plan check is only for showing this nicer prompt instead of a raw
+      // error, the server is what actually enforces it.
+      if (err instanceof ApiError && err.status === 402) {
+        setUpgradePrompt(true);
+      } else {
+        setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      }
     } finally {
       setSaving(false);
     }
@@ -127,6 +137,26 @@ export default function ToolDesignerPage() {
           {saving ? "Kaydediliyor..." : saved ? "Kaydedildi" : "Tasarımı Kaydet"}
         </button>
       </div>
+
+      {server?.plan === "Free" && !upgradePrompt && (
+        <p className="mt-4 rounded-md border border-violet-900/50 bg-violet-950/20 px-3 py-2 text-sm text-violet-300">
+          Free planda Tool Designer&apos;ı görüntüleyip düzenleyebilirsin, ama{" "}
+          <strong>Tasarımı Kaydet</strong>&apos;e bastığında değişiklikler kalıcı olarak
+          saklanmaz.
+        </p>
+      )}
+
+      {upgradePrompt && (
+        <div className="mt-4 rounded-md border border-amber-800/60 bg-amber-950/20 px-3 py-2.5 text-sm text-amber-200">
+          <p>
+            Bu değişiklikler kaydedilmedi - Tool Designer&apos;da yapılan özelleştirmeleri
+            saklamak için Free plan yeterli değil.
+          </p>
+          <Link href="/pricing" className="mt-2 inline-block font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200">
+            PRO&apos;ya geç →
+          </Link>
+        </div>
+      )}
 
       {error && (
         <p className="mt-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">{error}</p>
