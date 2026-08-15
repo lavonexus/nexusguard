@@ -15,7 +15,7 @@ function colorFor(username: string) {
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const { session, server, loading } = useServerContext();
+  const { session, loading } = useServerContext();
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [entries, setEntries] = useState<LeaderboardEntryResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function LeaderboardPage() {
       return;
     }
     setEntries(null);
-    getLeaderboard(session.apiKey, session.serverId, period)
+    getLeaderboard(period)
       .then(setEntries)
       .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
   }, [session, loading, router, period]);
@@ -44,7 +44,7 @@ export default function LeaderboardPage() {
         Tarama <span className="text-violet-400">Sıralaması</span>
       </h1>
       <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-        Ekipte en çok tarama yapan kim?
+        NexusGuard genelinde en çok tarama yapan kim?
       </p>
 
       <div className="mt-4 inline-flex items-center gap-1 rounded-full border border-zinc-800 p-1 text-xs">
@@ -60,13 +60,6 @@ export default function LeaderboardPage() {
           </button>
         ))}
       </div>
-
-      {server && server.plan !== "Enterprise" && (
-        <p className="mx-auto mt-4 max-w-md rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-xs text-zinc-500">
-          Bu sıralama en çok anlamı Enterprise ekiplerinde kazanır - tek başına yönetiyorsan
-          burada sadece kendini göreceksin.
-        </p>
-      )}
 
       {error && (
         <p className="mt-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">{error}</p>
@@ -106,13 +99,9 @@ export default function LeaderboardPage() {
                     <span className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-600/20 text-xs font-semibold text-violet-300">
                       {i + 4}
                     </span>
-                    <span
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-sm font-semibold text-white"
-                      style={{ backgroundColor: colorFor(e.username) }}
-                    >
-                      {e.username.charAt(0).toUpperCase()}
-                    </span>
+                    <Avatar entry={e} size={32} />
                     <span className="text-sm font-medium text-zinc-200">{e.username}</span>
+                    <ProviderBadge provider={e.provider} />
                   </div>
                   <div className="flex items-center gap-2">
                     <StatChip label="Tarama" value={e.scanCount} />
@@ -125,6 +114,47 @@ export default function LeaderboardPage() {
         </>
       )}
     </div>
+  );
+}
+
+function Avatar({ entry, size }: { entry: LeaderboardEntryResponse; size: number }) {
+  if (entry.avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element -- avatar hosts are external
+    // (Discord/Google CDNs), a fixed set next/image's remotePatterns isn't configured for.
+    return (
+      <img
+        src={entry.avatarUrl}
+        alt={entry.username}
+        width={size}
+        height={size}
+        className="shrink-0 rounded-md object-cover"
+        style={{ width: size, height: size }}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
+      style={{ backgroundColor: colorFor(entry.username), width: size, height: size }}
+    >
+      {entry.username.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+function ProviderBadge({ provider }: { provider: LeaderboardEntryResponse["provider"] }) {
+  if (!provider) return null;
+  const isDiscord = provider === "Discord";
+  return (
+    <span
+      title={provider}
+      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${
+        isDiscord ? "bg-[#5865F2]" : "bg-white text-black"
+      }`}
+    >
+      {isDiscord ? "D" : "G"}
+    </span>
   );
 }
 
@@ -144,14 +174,12 @@ function PodiumCard({ entry, rank, tall }: { entry?: LeaderboardEntryResponse; r
       >
         {rank}. SIRA
       </span>
-      <div
-        className="mx-auto mt-3 flex h-14 w-14 items-center justify-center rounded-xl text-xl font-bold text-white"
-        style={{ backgroundColor: colorFor(entry.username) }}
-      >
-        {entry.username.charAt(0).toUpperCase()}
+      <div className="mx-auto mt-3 flex justify-center">
+        <Avatar entry={entry} size={56} />
       </div>
-      <div className="mt-2 truncate text-sm font-semibold text-white">
+      <div className="mt-2 flex items-center justify-center gap-1.5 truncate text-sm font-semibold text-white">
         {rank}. {entry.username}
+        <ProviderBadge provider={entry.provider} />
       </div>
       <div className="mx-auto mt-3 space-y-1.5">
         <StatChip label="Tarama" value={entry.scanCount} full />

@@ -91,6 +91,8 @@ export interface MyServerResponse extends ServerResponse {
 export interface LeaderboardEntryResponse {
   userId: string;
   username: string;
+  avatarUrl: string | null;
+  provider: "Discord" | "Google" | null;
   scanCount: number;
   detectionCount: number;
 }
@@ -249,10 +251,11 @@ export function listMyServers() {
   return sessionRequest<MyServerResponse[]>("/api/servers/mine");
 }
 
-export function getLeaderboard(apiKey: string, serverId: string, period: "weekly" | "monthly") {
-  return request<LeaderboardEntryResponse[]>(`/api/servers/${serverId}/leaderboard?period=${period}`, {
-    headers: { "X-Api-Key": apiKey },
-  });
+// Global, cross-server - every NexusGuard user, not just your own team. Session-cookie
+// authenticated (any logged-in dashboard user can see it), not tied to a specific server's
+// API key.
+export function getLeaderboard(period: "weekly" | "monthly") {
+  return sessionRequest<LeaderboardEntryResponse[]>(`/api/leaderboard?period=${period}`);
 }
 
 export function listScans(apiKey: string) {

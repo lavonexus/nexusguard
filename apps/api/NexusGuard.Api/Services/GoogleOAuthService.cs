@@ -77,7 +77,7 @@ public class GoogleOAuthService : IGoogleOAuthService
         var profile = await profileResponse.Content.ReadFromJsonAsync<GoogleUserInfoResponse>(cancellationToken: ct)
             ?? throw new InvalidOperationException("Google profile response was empty.");
 
-        return new GoogleProfile(profile.Sub, profile.Email, profile.Name);
+        return new GoogleProfile(profile.Sub, profile.Email, profile.Name, profile.Picture);
     }
 
     private record GoogleTokenResponse([property: JsonPropertyName("access_token")] string AccessToken);
@@ -85,5 +85,6 @@ public class GoogleOAuthService : IGoogleOAuthService
     private record GoogleUserInfoResponse(
         [property: JsonPropertyName("sub")] string Sub,
         [property: JsonPropertyName("email")] string Email,
-        [property: JsonPropertyName("name")] string Name);
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("picture")] string? Picture);
 }

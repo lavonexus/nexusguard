@@ -25,6 +25,8 @@ public class UserSessionService : IUserSessionService
         if (user is not null)
         {
             user.Username = profile.Username;
+            user.AvatarUrl = profile.AvatarUrl;
+            user.LastLoginProvider = "Discord";
             await _db.SaveChangesAsync(ct);
             return user;
         }
@@ -34,6 +36,8 @@ public class UserSessionService : IUserSessionService
             Id = Guid.NewGuid(),
             DiscordId = profile.Id,
             Username = profile.Username,
+            AvatarUrl = profile.AvatarUrl,
+            LastLoginProvider = "Discord",
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -48,6 +52,8 @@ public class UserSessionService : IUserSessionService
         if (user is not null)
         {
             user.Email = profile.Email;
+            user.AvatarUrl = profile.Picture;
+            user.LastLoginProvider = "Google";
             ApplyAdminBootstrap(user);
             await _db.SaveChangesAsync(ct);
             return user;
@@ -59,6 +65,8 @@ public class UserSessionService : IUserSessionService
             GoogleId = profile.Id,
             Username = string.IsNullOrWhiteSpace(profile.Name) ? profile.Email : profile.Name,
             Email = profile.Email,
+            AvatarUrl = profile.Picture,
+            LastLoginProvider = "Google",
             CreatedAt = DateTime.UtcNow,
         };
         ApplyAdminBootstrap(user);

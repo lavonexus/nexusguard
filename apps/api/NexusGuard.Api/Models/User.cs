@@ -16,6 +16,14 @@ public class User
     public string? DiscordId { get; set; }
     public string? GoogleId { get; set; }
     public string? Email { get; set; }
+
+    // Refreshed on every login, same as Username - always reflects whichever provider they
+    // most recently signed in with, not necessarily the first one they ever linked. Used on
+    // the global leaderboard so a Discord login shows their Discord avatar/name and a Google
+    // login shows their Google one, per the account that's actually current.
+    public string? AvatarUrl { get; set; }
+    public string? LastLoginProvider { get; set; } // "Discord" | "Google"
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
 

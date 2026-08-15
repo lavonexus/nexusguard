@@ -24,6 +24,8 @@ public class NexusGuardDbContext : DbContext
             e.HasIndex(u => u.GoogleId).IsUnique(false);
             e.Property(u => u.Username).IsRequired().HasMaxLength(64);
             e.Property(u => u.IsSiteAdmin).HasDefaultValue(false);
+            e.Property(u => u.AvatarUrl).HasMaxLength(512);
+            e.Property(u => u.LastLoginProvider).HasMaxLength(16);
         });
 
         modelBuilder.Entity<Server>(e =>

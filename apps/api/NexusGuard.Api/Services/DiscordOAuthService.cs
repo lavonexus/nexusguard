@@ -73,12 +73,21 @@ public class DiscordOAuthService : IDiscordOAuthService
         var profile = await profileResponse.Content.ReadFromJsonAsync<DiscordUserResponse>(cancellationToken: ct)
             ?? throw new InvalidOperationException("Discord profile response was empty.");
 
-        return new DiscordProfile(profile.Id, profile.Username);
+        // avatar is null for accounts still on Discord's default avatar - CDN convention for
+        // that case is /embed/avatars/<index>.png, not a 404. Animated avatars (a hash starting
+        // "a_") are only actually animated as .gif; a static .png of an animated hash still
+        // renders (just the first frame), so it's a safe uniform choice for a leaderboard.
+        var avatarUrl = string.IsNullOrEmpty(profile.Avatar)
+            ? "https://cdn.discordapp.com/embed/avatars/0.png"
+            : $"https://cdn.discordapp.com/avatars/{profile.Id}/{profile.Avatar}.png";
+
+        return new DiscordProfile(profile.Id, profile.Username, avatarUrl);
     }
 
     private record DiscordTokenResponse([property: JsonPropertyName("access_token")] string AccessToken);
 
     private record DiscordUserResponse(
         [property: JsonPropertyName("id")] string Id,
-        [property: JsonPropertyName("username")] string Username);
+        [property: JsonPropertyName("username")] string Username,
+        [property: JsonPropertyName("avatar")] string? Avatar);
 }

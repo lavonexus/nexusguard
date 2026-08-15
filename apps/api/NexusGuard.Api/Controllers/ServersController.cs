@@ -125,43 +125,6 @@ public class ServersController : ControllerBase
         return ToServerResponse(server);
     }
 
-    // "Who scans the most" among this server's owner + team, over a rolling window. Enterprise
-    // team management already restricts who can be attributed here (see AddMember); ranking
-    // is meaningless for a lone admin, but the endpoint doesn't bother enforcing that - an
-    // empty/single-row leaderboard is a fine answer too.
-    [HttpGet("{id:guid}/leaderboard")]
-    [Authorize(AuthenticationSchemes = OwnerSchemes)]
-    public async Task<ActionResult<List<LeaderboardEntryResponse>>> Leaderboard(Guid id, [FromQuery] string period = "weekly")
-    {
-        var server = await _db.Servers.FindAsync(id);
-        if (server is null) return NotFound();
-        if (!await CallerCanAccessServerAsync(server)) return Forbid();
-
-        var windowDays = period == "monthly" ? 30 : 7;
-        var since = DateTime.UtcNow.AddDays(-windowDays);
-
-        var scans = await _db.ScanSessions
-            .Include(s => s.Detections)
-            .Where(s => s.ServerId == id && s.CreatedByUserId != null && s.CreatedAt >= since)
-            .ToListAsync();
-
-        var userIds = scans.Select(s => s.CreatedByUserId!.Value).Distinct().ToList();
-        var users = await _db.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username);
-
-        var ranked = scans
-            .GroupBy(s => s.CreatedByUserId!.Value)
-            .Select(g => new LeaderboardEntryResponse(
-                g.Key,
-                users.TryGetValue(g.Key, out var name) ? name : "(bilinmiyor)",
-                g.Count(),
-                g.Sum(s => s.Detections.Count)))
-            .OrderByDescending(e => e.ScanCount)
-            .ThenByDescending(e => e.DetectionCount)
-            .ToList();
-
-        return ranked;
-    }
-
     // Enterprise-only: teammates beyond the owner. Added by their NexusGuard Discord username,
     // so they must have signed in at least once already (that's how Users rows get created).
     [HttpGet("{id:guid}/members")]

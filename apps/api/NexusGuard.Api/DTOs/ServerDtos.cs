@@ -27,5 +27,3 @@ public record MyServerResponse(
 
 public record RenameServerRequest(string Name);
 
-// "Who scans the most" - Enterprise teams only, since it's meaningless with a single admin.
-public record LeaderboardEntryResponse(Guid UserId, string Username, int ScanCount, int DetectionCount);

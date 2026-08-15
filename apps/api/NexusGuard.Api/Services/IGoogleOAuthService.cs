@@ -1,6 +1,6 @@
 namespace NexusGuard.Api.Services;
 
-public record GoogleProfile(string Id, string Email, string Name);
+public record GoogleProfile(string Id, string Email, string Name, string? Picture);
 
 public interface IGoogleOAuthService
 {
