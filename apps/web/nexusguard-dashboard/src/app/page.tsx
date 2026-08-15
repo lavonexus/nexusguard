@@ -116,9 +116,9 @@ export default function Home() {
             ✦ NexusGuard ile tanışın
           </span>
           <h1 className="mt-6 text-5xl font-semibold tracking-tight text-white sm:text-6xl">
-            Yakalanamayanı
+            Şüpheye değil,
             <br />
-            yakalamak için.
+            kanıta güven.
           </h1>
           <p className="mt-5 max-w-xl text-balance text-base text-zinc-400 sm:text-lg">
             NexusGuard, oyuncunun bilgisayarından yalnızca ham veri toplayan otomatik bir tarama
