@@ -24,7 +24,15 @@ export async function GET(request: NextRequest) {
 
   const userAgent = request.headers.get("user-agent") ?? "";
   if (LINK_PREVIEW_BOT_PATTERN.test(userAgent)) {
-    return new NextResponse(buildPreviewHtml(request.nextUrl.toString(), pin), {
+    // request.nextUrl reflects the Host header the Node process actually received, which
+    // behind Render's proxy is its own internal bind address (0.0.0.0:10000), not the public
+    // domain - x-forwarded-host/-proto are what the proxy tells us the client actually used.
+    const forwardedHost = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+    const origin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
+    const url = `${origin}${request.nextUrl.pathname}${request.nextUrl.search}`;
+
+    return new NextResponse(buildPreviewHtml(url, origin, pin), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
@@ -41,8 +49,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-function buildPreviewHtml(url: string, pin: string): string {
-  const origin = new URL(url).origin;
+function buildPreviewHtml(url: string, origin: string, pin: string): string {
   const title = "NexusGuard Scanner";
   const description = `PIN ${pin} icin tarama araci - indirmek icin tikla.`;
   const image = `${origin}/scanner-og`;
