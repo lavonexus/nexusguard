@@ -9,21 +9,24 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- Database ---
 // Render's managed Postgres (and most other PaaS databases) hand back a postgres:// URI, not
-// the ADO.NET keyword=value string Npgsql expects - ConnectionStrings:Default (appsettings /
-// docker-compose) always wins when set; DATABASE_URL is only parsed as a fallback for hosts
-// that only offer the URI form.
-var connectionString = builder.Configuration.GetConnectionString("Default");
-if (string.IsNullOrEmpty(connectionString))
+// the ADO.NET keyword=value string Npgsql expects. DATABASE_URL wins whenever it's present -
+// appsettings.json's ConnectionStrings:Default is only ever a local-dev fallback (it always
+// has *some* value there, pointing at localhost, so checking "is it empty" first would never
+// fall through to DATABASE_URL - confirmed by an actual failed deploy trying to reach
+// 127.0.0.1:5432 in production before this was fixed).
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+string? connectionString;
+if (!string.IsNullOrEmpty(databaseUrl))
 {
-    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-    if (!string.IsNullOrEmpty(databaseUrl))
-    {
-        var uri = new Uri(databaseUrl);
-        var userInfo = uri.UserInfo.Split(':', 2);
-        connectionString =
-            $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
-            $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
-    }
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    connectionString =
+        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+}
+else
+{
+    connectionString = builder.Configuration.GetConnectionString("Default");
 }
 
 builder.Services.AddDbContext<NexusGuardDbContext>(options =>
