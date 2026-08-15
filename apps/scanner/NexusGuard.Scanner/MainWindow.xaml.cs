@@ -26,7 +26,17 @@ public partial class MainWindow : Window
         // dark variant instead of building a fully custom chrome just for this.
         SourceInitialized += (_, _) => UseDarkTitleBar();
 
-        var apiUrl = CliOptions.Parse(Environment.GetCommandLineArgs()).ApiUrl ?? "http://localhost:5080";
+        // A --api flag always wins (still useful for local testing). Otherwise the default
+        // depends on build config, not a runtime check - a Release build is what actually gets
+        // published and downloaded by real players, so it has to default to the real API, not
+        // localhost. Confirmed by an actual downloaded exe failing to connect in production
+        // before this was split out.
+#if DEBUG
+        const string defaultApiUrl = "http://localhost:5080";
+#else
+        const string defaultApiUrl = "https://api.nexusscanner.com";
+#endif
+        var apiUrl = CliOptions.Parse(Environment.GetCommandLineArgs()).ApiUrl ?? defaultApiUrl;
         _api = new ApiClient(apiUrl);
 
         _pinBoxes = [Pin0, Pin1, Pin2, Pin3, Pin4, Pin5];
