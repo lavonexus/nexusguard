@@ -400,3 +400,43 @@ export function adminCancelPlan(serverId: string) {
     method: "POST",
   });
 }
+
+// Cross-server - every scan on the platform, not just one server's own. Distinct from
+// listScans()/getScan() above, which are scoped to whichever server the caller's API key
+// belongs to.
+export interface AdminScanSummaryResponse {
+  id: string;
+  playerIdentifier: string;
+  status: ScanStatus;
+  riskScore: number | null;
+  createdAt: string;
+  completedAt: string | null;
+  serverId: string;
+  serverName: string;
+  createdByUsername: string | null;
+  detectionCount: number;
+}
+
+export interface AdminScanDetailResponse {
+  scan: AdminScanSummaryResponse;
+  results: ScanResultSummaryResponse[];
+  detections: DetectionResponse[];
+}
+
+export function listAdminScans(query?: string, status?: string) {
+  const params = new URLSearchParams();
+  if (query) params.set("query", query);
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  return sessionRequest<AdminScanSummaryResponse[]>(`/api/admin/scans${qs ? `?${qs}` : ""}`);
+}
+
+export function getAdminScan(id: string) {
+  return sessionRequest<AdminScanDetailResponse>(`/api/admin/scans/${id}`);
+}
+
+// Irreversible - see AdminController.DeleteScan for why this only exists here, not on the
+// per-server scan endpoints.
+export function deleteAdminScan(id: string) {
+  return sessionRequest<void>(`/api/admin/scans/${id}`, { method: "DELETE" });
+}

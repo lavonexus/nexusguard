@@ -172,6 +172,95 @@ public class AdminController : ControllerBase
             server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt, memberCount + 1, server.CreatedAt);
     }
 
+    // Cross-server: unlike ScansController (scoped to whichever server the caller's own API
+    // key belongs to), a site admin can see every scan any server has ever run.
+    [HttpGet("scans")]
+    public async Task<ActionResult<List<AdminScanSummaryResponse>>> ListScans(
+        [FromQuery] string? query, [FromQuery] string? status)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var scans = _db.ScanSessions
+            .Include(s => s.Server)
+            .Include(s => s.CreatedByUser)
+            .Include(s => s.Detections)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var q = query.Trim().ToLower();
+            scans = scans.Where(s =>
+                s.PlayerIdentifier.ToLower().Contains(q) ||
+                (s.Server != null && s.Server.Name.ToLower().Contains(q)) ||
+                (s.CreatedByUser != null && s.CreatedByUser.Username.ToLower().Contains(q)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) &&
+            Enum.TryParse<ScanSessionStatus>(status, ignoreCase: true, out var statusFilter))
+        {
+            scans = scans.Where(s => s.Status == statusFilter);
+        }
+
+        var list = await scans.OrderByDescending(s => s.CreatedAt).Take(200).ToListAsync();
+
+        return list.Select(ToAdminScanSummary).ToList();
+    }
+
+    [HttpGet("scans/{id:guid}")]
+    public async Task<ActionResult<AdminScanDetailResponse>> GetScan(Guid id)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var session = await _db.ScanSessions
+            .Include(s => s.Server)
+            .Include(s => s.CreatedByUser)
+            .Include(s => s.Results)
+            .Include(s => s.Detections)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (session is null) return NotFound();
+
+        var results = session.Results
+            .OrderBy(r => r.CreatedAt)
+            .Select(r => new ScanResultSummaryResponse(r.Id, r.ResultType.ToString(), r.DataJson, r.CreatedAt))
+            .ToList();
+
+        var detections = session.Detections
+            .OrderByDescending(d => d.Weight)
+            .Select(d => new DetectionResponse(
+                d.Id, d.RuleId, d.Description, d.Weight, d.Evidence, d.CreatedAt,
+                d.Category, d.Status, d.Confidence, d.Sha256, d.Publisher, d.Signed, d.FirstSeenUtc, d.LastModifiedUtc))
+            .ToList();
+
+        return new AdminScanDetailResponse(ToAdminScanSummary(session), results, detections);
+    }
+
+    // Irreversible - cascades to the scan's own Results and Detections (see
+    // NexusGuardDbContext's Cascade config on both). Deliberately not exposed on the
+    // per-server ScansController: a server owner can see their own player's scans but never
+    // erase them, since that's evidence of the very thing NexusGuard exists to catch. Only the
+    // site admin can, for cleaning up test/bad data or acting on a takedown/privacy request.
+    [HttpDelete("scans/{id:guid}")]
+    public async Task<IActionResult> DeleteScan(Guid id)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var session = await _db.ScanSessions.FindAsync(id);
+        if (session is null) return NotFound();
+
+        _db.ScanSessions.Remove(session);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    private static AdminScanSummaryResponse ToAdminScanSummary(ScanSession s) => new(
+        s.Id, s.PlayerIdentifier, s.Status.ToString(), s.RiskScore, s.CreatedAt, s.CompletedAt,
+        s.ServerId, s.Server?.Name ?? "(bilinmiyor)", s.CreatedByUser?.Username, s.Detections.Count);
+
     // Always re-checked against the database rather than trusting a claim on the session
     // cookie, so revoking IsSiteAdmin takes effect on the caller's very next request instead
     // of only after their session expires.

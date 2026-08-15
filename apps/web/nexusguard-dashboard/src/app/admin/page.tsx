@@ -1,21 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
   adminCancelPlan,
   adminSetPlan,
+  deleteAdminScan,
+  listAdminScans,
   listAdminServers,
   listAdminUsers,
   setSiteAdmin,
+  type AdminScanSummaryResponse,
   type AdminServerResponse,
   type AdminUserResponse,
   type Plan,
 } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
+import StatusBadge from "@/components/StatusBadge";
 
-type Tab = "users" | "servers";
+type Tab = "users" | "servers" | "scans";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -59,10 +64,14 @@ export default function AdminPage() {
         <TabButton active={tab === "users"} onClick={() => setTab("users")}>
           Müşteriler
         </TabButton>
+        <TabButton active={tab === "scans"} onClick={() => setTab("scans")}>
+          Tarama Yönetimi
+        </TabButton>
       </div>
 
       {tab === "servers" && <ServersTab />}
       {tab === "users" && <UsersTab currentUserId={user.id} />}
+      {tab === "scans" && <ScansTab />}
     </div>
   );
 }
@@ -461,6 +470,172 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
                     >
                       {u.isSiteAdmin ? "Admin'i Kaldır" : "Admin Yap"}
                     </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const SCAN_STATUS_OPTIONS: { label: string; value: string }[] = [
+  { label: "Tümü", value: "" },
+  { label: "Beklemede", value: "Pending" },
+  { label: "Devam ediyor", value: "InProgress" },
+  { label: "Tamamlandı", value: "Completed" },
+  { label: "Süresi doldu", value: "Expired" },
+  { label: "Başarısız", value: "Failed" },
+  { label: "İptal edildi", value: "Cancelled" },
+];
+
+// Cross-server - every scan any server has ever run, not just one team's own (see the
+// [id] detail page and AdminController.ListScans/DeleteScan). Distinct from /scans, which
+// only ever shows the currently-selected server's own scans to that server's own admins.
+function ScansTab() {
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const [scans, setScans] = useState<AdminScanSummaryResponse[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const load = useCallback((q?: string, s?: string) => {
+    listAdminScans(q, s)
+      .then(setScans)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    load(query, status);
+  }
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    setError(null);
+    try {
+      await deleteAdminScan(id);
+      setScans((prev) => prev?.filter((s) => s.id !== id) ?? null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    } finally {
+      setDeletingId(null);
+      setConfirmingDeleteId(null);
+    }
+  }
+
+  return (
+    <div className="mt-6">
+      <p className="text-sm text-zinc-400">
+        Platformdaki tüm sunucularda, tüm kullanıcılar tarafından yapılmış her tarama - kendi
+        sunucundan bağımsız.
+      </p>
+
+      <form onSubmit={handleSearch} className="mt-4 flex flex-wrap gap-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Oyuncu, sunucu ya da taramayı başlatan kullanıcı ile ara"
+          className="w-full max-w-sm rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
+        />
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-2 text-sm text-zinc-200 outline-none focus:border-violet-600"
+        >
+          {SCAN_STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600">
+          Ara
+        </button>
+      </form>
+
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+
+      <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-800">
+        <table className="w-full min-w-[900px] text-left text-sm">
+          <thead className="bg-zinc-900 text-zinc-400">
+            <tr>
+              <th className="px-4 py-2 font-medium">Oyuncu</th>
+              <th className="px-4 py-2 font-medium">Sunucu</th>
+              <th className="px-4 py-2 font-medium">Başlatan</th>
+              <th className="px-4 py-2 font-medium">Durum</th>
+              <th className="px-4 py-2 font-medium">Risk</th>
+              <th className="px-4 py-2 font-medium">Tespit</th>
+              <th className="px-4 py-2 font-medium">Tarih</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800">
+            {scans === null && (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-zinc-500">
+                  Yükleniyor...
+                </td>
+              </tr>
+            )}
+            {scans?.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-zinc-500">
+                  Sonuç bulunamadı.
+                </td>
+              </tr>
+            )}
+            {scans?.map((s) => (
+              <tr key={s.id}>
+                <td className="px-4 py-2.5 font-medium text-zinc-200">{s.playerIdentifier}</td>
+                <td className="px-4 py-2.5 text-zinc-400">{s.serverName}</td>
+                <td className="px-4 py-2.5 text-zinc-400">{s.createdByUsername ?? "—"}</td>
+                <td className="px-4 py-2.5">
+                  <StatusBadge status={s.status as never} />
+                </td>
+                <td className="px-4 py-2.5 text-zinc-300">{s.riskScore ?? "—"}</td>
+                <td className="px-4 py-2.5 text-zinc-400">{s.detectionCount}</td>
+                <td className="px-4 py-2.5 text-zinc-500">{new Date(s.createdAt).toLocaleString("tr-TR")}</td>
+                <td className="px-4 py-2.5 text-right">
+                  {confirmingDeleteId === s.id ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="text-xs text-zinc-500">Emin misin?</span>
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        disabled={deletingId === s.id}
+                        className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
+                      >
+                        {deletingId === s.id ? "..." : "Evet, sil"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDeleteId(null)}
+                        className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
+                      >
+                        Vazgeç
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Link
+                        href={`/admin/scans/${s.id}`}
+                        className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300"
+                      >
+                        Detay
+                      </Link>
+                      <button
+                        onClick={() => setConfirmingDeleteId(s.id)}
+                        className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
+                      >
+                        Sil
+                      </button>
+                    </span>
                   )}
                 </td>
               </tr>
