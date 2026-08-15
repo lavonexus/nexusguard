@@ -19,6 +19,14 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      # The real fix for the inotify-limit crash: this switches .NET's file watcher to a
+      # polling implementation that never touches the inotify API at all, instead of trying to
+      # avoid triggering the limit. Needed because the crash happens inside
+      # WebApplication.CreateBuilder() itself, before any of our own code runs, so nothing in
+      # Program.cs can intervene early enough - confirmed by two failed deploys where a
+      # Program.cs-level fix alone didn't help. https://github.com/dotnet/aspnetcore/issues/3475
+      - key: DOTNET_USE_POLLING_FILE_WATCHER
+        value: "true"
       - key: DATABASE_URL
         fromDatabase:
           name: nexusguard-db
