@@ -19,6 +19,12 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      # Render's container environment has a low inotify-instance limit, and .NET's default
+      # appsettings.json file-watcher (for hot-reload) hits it on startup with an unhandled
+      # IOException - confirmed by an actual failed deploy. This is the standard fix for
+      # ASP.NET Core in constrained container environments; nothing here needs live-reloading.
+      - key: DOTNET_hostBuilder__reloadConfigOnChange
+        value: "false"
       - key: DATABASE_URL
         fromDatabase:
           name: nexusguard-db
