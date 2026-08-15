@@ -28,6 +28,12 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
 ENV PORT=3000
+# Next.js's standalone server.js only binds to every interface when HOSTNAME is explicitly
+# 0.0.0.0 - without it, it can bind to localhost only, which is unreachable from outside the
+# container (the platform's proxy gets a connection refused / 502) even though the app itself
+# looks fully started in the logs. Confirmed by an actual failed deploy: Render correctly
+# detected the port open, but every request through the public URL still 502'd.
+ENV HOSTNAME="0.0.0.0"
 EXPOSE 3000
 
 CMD ["node", "server.js"]
