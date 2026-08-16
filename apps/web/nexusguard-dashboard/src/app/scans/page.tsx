@@ -359,11 +359,13 @@ export default function ScansPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-800 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-300">PIN Kodun</span>
+          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900/40 to-transparent">
+            <div className="flex items-center justify-between px-4 pt-4">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                <span className="text-sm">🔑</span> PIN Kodun
+              </span>
               {activeScan && (
-                <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase text-emerald-400">
+                <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400 ring-1 ring-inset ring-emerald-500/30">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   Aktif
                 </span>
@@ -371,23 +373,23 @@ export default function ScansPage() {
             </div>
 
             {!activeScan ? (
-              <div className="mt-3 rounded-lg border border-dashed border-zinc-800 px-3 py-6 text-center">
+              <div className="mx-4 mb-4 mt-3 rounded-lg border border-dashed border-zinc-800 px-3 py-6 text-center">
                 <p className="text-xs text-zinc-500">Şu an bekleyen bir tarama yok.</p>
                 <button
                   onClick={handleNewScan}
                   disabled={creating}
-                  className="mt-3 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+                  className="mt-3 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-500 disabled:opacity-60"
                 >
                   {creating ? "Oluşturuluyor..." : "Yeni tarama"}
                 </button>
               </div>
             ) : (
-              <>
-                <div className="mt-3 flex justify-center gap-1">
+              <div className="px-4 pb-4">
+                <div className="mt-3 flex justify-center gap-1.5">
                   {activeScan.pin.split("").map((ch, i) => (
                     <div
                       key={i}
-                      className="flex h-9 w-7 items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 font-mono text-sm font-semibold text-white"
+                      className="flex h-10 w-8 items-center justify-center rounded-lg border border-violet-800/60 bg-violet-950/20 font-mono text-base font-semibold text-white shadow-[0_0_12px_-4px_rgba(139,92,246,0.5)]"
                     >
                       {ch}
                     </div>
@@ -395,14 +397,19 @@ export default function ScansPage() {
                 </div>
                 <button
                   onClick={() => handleCopy("pin", activeScan.pin)}
-                  className="mt-3 w-full rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500"
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-500"
                 >
+                  <span aria-hidden>⧉</span>
                   {copiedField === "pin" ? "Kopyalandı" : "PIN'i kopyala"}
                 </button>
 
                 <div className="mt-4 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
                   <span>İndirme bağlantısı</span>
-                  <button onClick={() => handleCopy("link", downloadLink)} className="text-violet-400 hover:text-violet-300">
+                  <button
+                    onClick={() => handleCopy("link", downloadLink)}
+                    className="flex items-center gap-1 text-violet-400 transition-colors hover:text-violet-300"
+                  >
+                    <span aria-hidden>↗</span>
                     {copiedField === "link" ? "Kopyalandı" : "Paylaş"}
                   </button>
                 </div>
@@ -412,35 +419,42 @@ export default function ScansPage() {
 
                 <button
                   onClick={() => router.push(`/scans/${activeScan.scanId}`)}
-                  className="mt-3 w-full rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:border-zinc-600"
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-900/60"
                 >
                   Sonuçları izle
+                  <span aria-hidden>→</span>
                 </button>
-              </>
+              </div>
             )}
           </div>
 
-          <div className="rounded-xl border border-zinc-800 p-4">
-            <span className="text-xs font-semibold text-zinc-300">Hızlı istatistikler</span>
-            <div className="mt-3 space-y-3">
+          <div className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900/40 to-transparent p-4">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+              <span className="text-sm">📊</span> Hızlı istatistikler
+            </span>
+            <div className="mt-3 space-y-1">
               <QuickStat
+                icon="📅"
                 label="Bu haftaki taramalar"
                 sub="geçen haftaya göre"
                 value={quickStats?.thisWeek}
                 delta={quickStats?.weekDelta ?? undefined}
               />
               <QuickStat
+                icon="🎯"
                 label="Tespit oranı"
                 sub={`${counts.Tümü} taramada ${counts.Hile} işaretli`}
                 value={quickStats ? `${quickStats.detectionRate.toFixed(1)}%` : undefined}
                 valueClassName={quickStats && quickStats.detectionRate > 0 ? "text-red-400" : undefined}
               />
               <QuickStat
+                icon="⏱"
                 label="Ort. tarama süresi"
                 sub="tamamlanan taramalar"
                 value={quickStats?.avgDurationMs != null ? formatDuration(quickStats.avgDurationMs) : "—"}
               />
               <QuickStat
+                icon="✨"
                 label="Temiz serisi"
                 sub="üst üste temiz"
                 value={quickStats?.cleanStreak}
@@ -455,12 +469,14 @@ export default function ScansPage() {
 }
 
 function QuickStat({
+  icon,
   label,
   sub,
   value,
   delta,
   valueClassName,
 }: {
+  icon: string;
   label: string;
   sub: string;
   value?: string | number;
@@ -468,17 +484,25 @@ function QuickStat({
   valueClassName?: string;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <div className="text-xs text-zinc-300">{label}</div>
-        <div className="text-[11px] text-zinc-600">{sub}</div>
+    <div className="flex items-center justify-between gap-3 rounded-lg px-1.5 py-2 transition-colors hover:bg-zinc-900/40">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-xs">{icon}</span>
+        <div>
+          <div className="text-xs text-zinc-300">{label}</div>
+          <div className="text-[11px] text-zinc-600">{sub}</div>
+        </div>
       </div>
       <div className="flex items-center gap-1.5">
         <span className={`text-sm font-semibold ${valueClassName ?? "text-white"}`}>{value ?? "—"}</span>
         {typeof delta === "number" && (
-          <span className={`text-[10px] font-medium ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {delta >= 0 ? "+" : ""}
-            {delta}%
+          <span
+            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
+              delta >= 0
+                ? "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30"
+                : "bg-red-500/10 text-red-400 ring-red-500/30"
+            }`}
+          >
+            {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}%
           </span>
         )}
       </div>
