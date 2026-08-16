@@ -85,6 +85,16 @@ export default function DashboardSidebar() {
           >
             Tool Designer
           </Link>
+          <Link
+            href="/marketplace"
+            className={`block rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
+              pathname === "/marketplace" || pathname.startsWith("/marketplace/")
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
+            }`}
+          >
+            Mağaza
+          </Link>
         </div>
 
         <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">Diğer</div>

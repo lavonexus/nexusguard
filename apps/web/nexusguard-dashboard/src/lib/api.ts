@@ -401,6 +401,108 @@ export function adminCancelPlan(serverId: string) {
   });
 }
 
+// Reactive safety net for the marketplace - listings/reviews publish immediately with no
+// approval gate, so this is the only way to take down something inappropriate after the fact.
+export function adminDeleteMarketplaceListing(id: string) {
+  return sessionRequest<void>(`/api/admin/marketplace/listings/${id}`, { method: "DELETE" });
+}
+
+export function adminDeleteMarketplaceReview(id: string) {
+  return sessionRequest<void>(`/api/admin/marketplace/reviews/${id}`, { method: "DELETE" });
+}
+
+// --- Tool Designer library + marketplace (Controllers/MarketplaceController.cs) -----------
+// A private per-user library of saved theme snapshots, plus a public marketplace anyone can
+// browse/review/install into their own Tool Designer. Theme-only (colors/text/logo/watermark)
+// - never a place to share detection logic.
+
+export interface SavedToolDesignResponse {
+  id: string;
+  name: string;
+  theme: ScannerTheme;
+  createdAt: string;
+}
+
+export interface MarketplaceListingSummaryResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  authorUsername: string;
+  installCount: number;
+  averageRating: number;
+  reviewCount: number;
+  createdAt: string;
+  accentColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  logoBase64: string | null;
+}
+
+export interface MarketplaceListingDetailResponse {
+  summary: MarketplaceListingSummaryResponse;
+  theme: ScannerTheme;
+  reviews: MarketplaceReviewResponse[];
+}
+
+export interface MarketplaceReviewResponse {
+  id: string;
+  reviewerUsername: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+export function listSavedDesigns() {
+  return sessionRequest<SavedToolDesignResponse[]>("/api/marketplace/designs");
+}
+
+export function saveDesign(name: string, theme: ScannerTheme) {
+  return sessionRequest<SavedToolDesignResponse>("/api/marketplace/designs", {
+    method: "POST",
+    body: JSON.stringify({ name, theme }),
+  });
+}
+
+export function deleteSavedDesign(id: string) {
+  return sessionRequest<void>(`/api/marketplace/designs/${id}`, { method: "DELETE" });
+}
+
+export function publishDesign(designId: string, title: string, description: string | null) {
+  return sessionRequest<MarketplaceListingSummaryResponse>(`/api/marketplace/designs/${designId}/publish`, {
+    method: "POST",
+    body: JSON.stringify({ title, description }),
+  });
+}
+
+export function listMarketplaceListings(query?: string) {
+  const qs = query ? `?query=${encodeURIComponent(query)}` : "";
+  return sessionRequest<MarketplaceListingSummaryResponse[]>(`/api/marketplace/listings${qs}`);
+}
+
+export function getMarketplaceListing(id: string) {
+  return sessionRequest<MarketplaceListingDetailResponse>(`/api/marketplace/listings/${id}`);
+}
+
+export function listMyListings() {
+  return sessionRequest<MarketplaceListingSummaryResponse[]>("/api/marketplace/mine");
+}
+
+export function submitReview(listingId: string, rating: number, comment: string | null) {
+  return sessionRequest<MarketplaceReviewResponse>(`/api/marketplace/listings/${listingId}/reviews`, {
+    method: "POST",
+    body: JSON.stringify({ rating, comment }),
+  });
+}
+
+// 402 (ApiError with status 402) means the caller's server is on the Free plan - same gate as
+// Tool Designer's own theme save.
+export function installListing(listingId: string, serverId: string) {
+  return sessionRequest<ScannerTheme>(`/api/marketplace/listings/${listingId}/install`, {
+    method: "POST",
+    body: JSON.stringify({ serverId }),
+  });
+}
+
 // Cross-server - every scan on the platform, not just one server's own. Distinct from
 // listScans()/getScan() above, which are scoped to whichever server the caller's API key
 // belongs to.

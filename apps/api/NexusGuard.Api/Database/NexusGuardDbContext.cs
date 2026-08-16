@@ -15,6 +15,9 @@ public class NexusGuardDbContext : DbContext
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<ServerMember> ServerMembers => Set<ServerMember>();
     public DbSet<ServerTheme> ServerThemes => Set<ServerTheme>();
+    public DbSet<SavedToolDesign> SavedToolDesigns => Set<SavedToolDesign>();
+    public DbSet<MarketplaceListing> MarketplaceListings => Set<MarketplaceListing>();
+    public DbSet<MarketplaceReview> MarketplaceReviews => Set<MarketplaceReview>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -110,6 +113,41 @@ public class NexusGuardDbContext : DbContext
             e.HasOne(t => t.Server)
                 .WithOne(s => s.Theme)
                 .HasForeignKey<ServerTheme>(t => t.ServerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SavedToolDesign>(e =>
+        {
+            e.Property(d => d.Name).IsRequired().HasMaxLength(100);
+            e.Property(d => d.ThemeJson).IsRequired().HasColumnType("text");
+            e.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MarketplaceListing>(e =>
+        {
+            e.Property(l => l.Title).IsRequired().HasMaxLength(100);
+            e.Property(l => l.Description).HasMaxLength(500);
+            e.Property(l => l.ThemeJson).IsRequired().HasColumnType("text");
+            e.HasOne(l => l.Author)
+                .WithMany()
+                .HasForeignKey(l => l.AuthorUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MarketplaceReview>(e =>
+        {
+            e.HasIndex(r => new { r.ListingId, r.ReviewerUserId }).IsUnique();
+            e.Property(r => r.Comment).HasMaxLength(500);
+            e.HasOne(r => r.Listing)
+                .WithMany(l => l.Reviews)
+                .HasForeignKey(r => r.ListingId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Reviewer)
+                .WithMany()
+                .HasForeignKey(r => r.ReviewerUserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

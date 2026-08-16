@@ -261,6 +261,39 @@ public class AdminController : ControllerBase
         s.Id, s.PlayerIdentifier, s.Status.ToString(), s.RiskScore, s.CreatedAt, s.CompletedAt,
         s.ServerId, s.Server?.Name ?? "(bilinmiyor)", s.CreatedByUser?.Username, s.Detections.Count);
 
+    // Reactive safety net for the marketplace (Controllers/MarketplaceController.cs) - listings
+    // and reviews publish immediately with no approval gate, so this is the only way to take
+    // down something inappropriate (an offensive logo/title/comment) after the fact.
+    [HttpDelete("marketplace/listings/{id:guid}")]
+    public async Task<IActionResult> DeleteMarketplaceListing(Guid id)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var listing = await _db.MarketplaceListings.FindAsync(id);
+        if (listing is null) return NotFound();
+
+        _db.MarketplaceListings.Remove(listing);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpDelete("marketplace/reviews/{id:guid}")]
+    public async Task<IActionResult> DeleteMarketplaceReview(Guid id)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var review = await _db.MarketplaceReviews.FindAsync(id);
+        if (review is null) return NotFound();
+
+        _db.MarketplaceReviews.Remove(review);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     // Always re-checked against the database rather than trusting a claim on the session
     // cookie, so revoking IsSiteAdmin takes effect on the caller's very next request instead
     // of only after their session expires.

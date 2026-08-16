@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, getScannerTheme, updateScannerTheme, type ScannerTheme } from "@/lib/api";
+import {
+  ApiError,
+  deleteSavedDesign,
+  getScannerTheme,
+  listSavedDesigns,
+  publishDesign,
+  saveDesign,
+  updateScannerTheme,
+  type SavedToolDesignResponse,
+  type ScannerTheme,
+} from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
 
 const DEFAULT_THEME: ScannerTheme = {
@@ -38,7 +48,7 @@ type StageKey = (typeof STAGES)[number]["key"];
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
-type Tab = "palette" | "labels" | "branding" | "options";
+type Tab = "palette" | "labels" | "branding" | "options" | "library";
 
 export default function ToolDesignerPage() {
   const router = useRouter();
@@ -191,6 +201,7 @@ export default function ToolDesignerPage() {
             <TabButton active={tab === "labels"} onClick={() => setTab("labels")} label="Etiketler" />
             <TabButton active={tab === "branding"} onClick={() => setTab("branding")} label="Marka" />
             <TabButton active={tab === "options"} onClick={() => setTab("options")} label="Seçenekler" />
+            <TabButton active={tab === "library"} onClick={() => setTab("library")} label="Kütüphanem" />
           </div>
 
           <div className="mt-6">
@@ -198,6 +209,7 @@ export default function ToolDesignerPage() {
             {tab === "labels" && <LabelsTab theme={theme} onChange={patch} />}
             {tab === "branding" && <BrandingTab theme={theme} onChange={patch} />}
             {tab === "options" && <OptionsTab theme={theme} onChange={patch} />}
+            {tab === "library" && <LibraryTab theme={theme} onApply={setTheme} />}
           </div>
 
           <div className="mt-8 flex items-center justify-between border-t border-zinc-900 pt-4 text-xs text-zinc-600">
@@ -372,6 +384,137 @@ function OptionsTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Pa
           />
         </button>
       </div>
+    </div>
+  );
+}
+
+function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: ScannerTheme) => void }) {
+  const [designs, setDesigns] = useState<SavedToolDesignResponse[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+
+  function load() {
+    listSavedDesigns()
+      .then(setDesigns)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
+  }
+
+  useEffect(load, []);
+
+  async function handleSave() {
+    const name = window.prompt("Bu tasarıma bir isim ver:", "Tasarımım");
+    if (!name || !name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const created = await saveDesign(name.trim(), theme);
+      setDesigns((prev) => (prev ? [created, ...prev] : [created]));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setError(null);
+    try {
+      await deleteSavedDesign(id);
+      setDesigns((prev) => prev?.filter((d) => d.id !== id) ?? null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    }
+  }
+
+  async function handlePublish(design: SavedToolDesignResponse) {
+    const title = window.prompt("Mağazada görünecek başlık:", design.name);
+    if (!title || !title.trim()) return;
+    const description = window.prompt("Kısa bir açıklama (isteğe bağlı):", "") ?? "";
+
+    setPublishingId(design.id);
+    setError(null);
+    try {
+      await publishDesign(design.id, title.trim(), description.trim() || null);
+      window.alert("Tasarım Mağaza'ya yüklendi.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    } finally {
+      setPublishingId(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm font-medium text-zinc-300">Kayıtlı Tasarımlarım</div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Şu anki tasarımı adlandırıp kaydet, sonra istediğin zaman geri yükle ya da{" "}
+            <Link href="/marketplace" className="text-violet-400 hover:text-violet-300">
+              Mağaza
+            </Link>
+            &apos;ya yükle.
+          </p>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="shrink-0 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+        >
+          {saving ? "Kaydediliyor..." : "Şu anki tasarımı kaydet"}
+        </button>
+      </div>
+
+      {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+
+      {designs === null && <p className="mt-6 text-sm text-zinc-500">Yükleniyor...</p>}
+
+      {designs !== null && designs.length === 0 && (
+        <p className="mt-6 rounded-lg border border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
+          Henüz kayıtlı bir tasarımın yok.
+        </p>
+      )}
+
+      {designs !== null && designs.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {designs.map((d) => (
+            <div key={d.id} className="flex items-center justify-between rounded-lg border border-zinc-800 p-3">
+              <div className="flex items-center gap-3">
+                <span
+                  className="h-8 w-8 shrink-0 rounded-md border border-zinc-700"
+                  style={{ backgroundColor: d.theme.accentColor }}
+                />
+                <div>
+                  <div className="text-sm font-medium text-zinc-200">{d.name}</div>
+                  <div className="text-[11px] text-zinc-600">{new Date(d.createdAt).toLocaleDateString("tr-TR")}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => onApply(d.theme)}
+                  className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300"
+                >
+                  Uygula
+                </button>
+                <button
+                  onClick={() => handlePublish(d)}
+                  disabled={publishingId === d.id}
+                  className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300 disabled:opacity-50"
+                >
+                  {publishingId === d.id ? "..." : "Pazara Yükle"}
+                </button>
+                <button
+                  onClick={() => handleDelete(d.id)}
+                  className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
+                >
+                  Sil
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
