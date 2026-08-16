@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NexusGuard.Api.Migrations
 {
     [DbContext(typeof(NexusGuardDbContext))]
-    [Migration("20260816222838_AddSupportTickets")]
-    partial class AddSupportTickets
+    [Migration("20260816223941_FixSupportTicketSnowflakeColumns")]
+    partial class FixSupportTicketSnowflakeColumns
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
