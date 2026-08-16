@@ -16,3 +16,67 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Dashboard starfield background (components/StarfieldBackground.tsx) - a fixed, pointer-
+   events-none layer behind the sidebar/content so it never affects layout or interaction. */
+.star-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  background: transparent;
+  animation-name: star-twinkle;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+@keyframes star-twinkle {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.shooting-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  filter: drop-shadow(0 0 4px rgba(196, 181, 253, 0.8));
+  animation-name: shooting-star;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(0.3, 0, 0.7, 1);
+}
+
+.shooting-star::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 90px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
+  transform: translateY(-50%);
+}
+
+@keyframes shooting-star {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  18% {
+    transform: translate(-420px, 260px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-420px, 260px);
+    opacity: 0;
+  }
+}

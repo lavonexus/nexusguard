@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DISCORD_PURCHASE_URL } from "@/lib/api";
@@ -8,6 +9,11 @@ import { loadSession, type ServerSession } from "@/lib/session";
 import { ServerProvider } from "@/lib/serverContext";
 import Logo from "@/components/Logo";
 import DashboardSidebar from "@/components/DashboardSidebar";
+
+// Star positions are randomized client-side (Math.random(), see StarfieldBackground.tsx) -
+// purely decorative, so skipping SSR avoids a server/client hydration mismatch instead of
+// trying to keep two random draws in sync.
+const StarfieldBackground = dynamic(() => import("@/components/StarfieldBackground"), { ssr: false });
 
 const MARKETING_LINKS = [
   { href: "/#features", label: "Özellikler" },
@@ -143,7 +149,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ServerProvider>
-      <div className="flex min-h-screen bg-zinc-950 text-zinc-100">
+      <StarfieldBackground />
+      <div className="flex min-h-screen text-zinc-100">
         <DashboardSidebar />
         <main className="min-w-0 flex-1 overflow-y-auto px-8 py-8">{children}</main>
       </div>
