@@ -84,6 +84,10 @@ public static class ScanRunner
             await Report(api, scanToken, "InstalledApplication", installedAppFacts);
         }
 
+        progress.Report(new ScanProgress(44, "Checking UEFI/Secure Boot/TPM state..."));
+        var firmwareFact = FirmwareScanner.Scan();
+        await Report(api, scanToken, "Firmware", new[] { firmwareFact });
+
         progress.Report(new ScanProgress(45, "Scanning FiveM, GTA V, and Windows user directories..."));
         var extendedFacts = ExtendedFileScanner.Scan();
         if (extendedFacts.Count > 0)

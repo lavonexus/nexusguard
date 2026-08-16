@@ -75,5 +75,19 @@ public record InstalledApplicationFact(
     string DisplayName, string? Publisher, string? DisplayVersion, string? InstallLocation,
     DateTime? InstallDate, string? UninstallString, bool ExecutablePathExists);
 
+// Weak, informational-only UEFI/Secure Boot/TPM/firmware-boot-entry facts - never scored, same
+// treatment as UsbDeviceFact. Verifying the firmware image itself hasn't been tampered with
+// would need a kernel driver or a hardware SPI programmer, which this scanner deliberately
+// never uses (see the read-only guarantee) - these are just the handful of UEFI-adjacent facts
+// readable from user mode without one. Disabling Secure Boot has plenty of legitimate reasons
+// (Linux dual-boot, older hardware, a pending BIOS update) and is not itself evidence of
+// anything on its own.
+public record FirmwareFact(
+    bool IsUefiBoot, bool? SecureBootEnabled,
+    bool? TpmPresent, bool? TpmEnabled, bool? TpmActivated, string? TpmSpecVersion,
+    List<FirmwareBootEntry> BootEntries);
+
+public record FirmwareBootEntry(string Identifier, string? Description, string? Path);
+
 // Drives the GUI progress bar - percent complete plus a short human-readable status line.
 public record ScanProgress(int Percent, string Status);

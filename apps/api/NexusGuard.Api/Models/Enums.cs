@@ -27,5 +27,6 @@ public enum ScanResultType
     Autostart,
     ScheduledTask,
     Service,
-    InstalledApplication
+    InstalledApplication,
+    Firmware
 }

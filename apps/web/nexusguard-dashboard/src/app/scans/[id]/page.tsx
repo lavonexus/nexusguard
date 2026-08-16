@@ -39,6 +39,22 @@ interface RpfFact {
   entries: string[];
 }
 
+interface FirmwareBootEntry {
+  identifier: string;
+  description: string | null;
+  path: string | null;
+}
+
+interface FirmwareFact {
+  isUefiBoot: boolean;
+  secureBootEnabled: boolean | null;
+  tpmPresent: boolean | null;
+  tpmEnabled: boolean | null;
+  tpmActivated: boolean | null;
+  tpmSpecVersion: string | null;
+  bootEntries: FirmwareBootEntry[];
+}
+
 export default function ScanDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -107,6 +123,13 @@ export default function ScanDetailPage() {
     const result = detail?.results.find((r) => r.resultType === "Rpf");
     if (!result) return [];
     return parseItems(result.dataJson) as unknown as RpfFact[];
+  }, [detail]);
+
+  const firmwareFact = useMemo<FirmwareFact | null>(() => {
+    const result = detail?.results.find((r) => r.resultType === "Firmware");
+    if (!result) return null;
+    const items = parseItems(result.dataJson);
+    return (items[0] as unknown as FirmwareFact) ?? null;
   }, [detail]);
 
   const rpfRuleIds = ["illegal-rpf", "suspicious-rpf-content"];
@@ -280,6 +303,66 @@ export default function ScanDetailPage() {
                       </tbody>
                     </table>
                   </div>
+                </>
+              )}
+
+              {firmwareFact && (
+                <>
+                  <h2 className="mt-8 text-sm font-semibold text-zinc-300">UEFI / Firmware bilgisi</h2>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Kullanıcı modundan okunabilen birkaç zayıf gösterge - firmware&apos;in kendisinin
+                    değiştirilip değiştirilmediğini kanıtlamaz (bunun için kernel sürücüsü ya da özel
+                    donanım gerekir, NexusGuard bunu asla yapmaz). Secure Boot&apos;un kapalı olmasının
+                    Linux dual-boot gibi birçok meşru sebebi vardır - bilgilendirme amaçlı, puanlamaya
+                    dahil edilmez.
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-4 rounded-lg border border-zinc-800 p-4 sm:grid-cols-4">
+                    <Field label="Önyükleme" value={firmwareFact.isUefiBoot ? "UEFI" : "Legacy BIOS"} />
+                    <Field
+                      label="Secure Boot"
+                      value={
+                        !firmwareFact.isUefiBoot
+                          ? "—"
+                          : firmwareFact.secureBootEnabled === null
+                            ? "Bilinmiyor"
+                            : firmwareFact.secureBootEnabled
+                              ? "Açık"
+                              : "Kapalı"
+                      }
+                    />
+                    <Field
+                      label="TPM"
+                      value={
+                        firmwareFact.tpmPresent === null
+                          ? "Bilinmiyor"
+                          : firmwareFact.tpmPresent
+                            ? `Var${firmwareFact.tpmActivated ? " (aktif)" : ""}${firmwareFact.tpmSpecVersion ? ` · ${firmwareFact.tpmSpecVersion}` : ""}`
+                            : "Yok"
+                      }
+                    />
+                    <Field label="Firmware önyükleme girişi" value={firmwareFact.bootEntries.length.toString()} />
+                  </div>
+
+                  {firmwareFact.bootEntries.length > 0 && (
+                    <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-zinc-900 text-zinc-400">
+                          <tr>
+                            <th className="px-4 py-2 font-medium">Açıklama</th>
+                            <th className="px-4 py-2 font-medium">Yol</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-800">
+                          {firmwareFact.bootEntries.map((e, i) => (
+                            <tr key={i}>
+                              <td className="px-4 py-2 text-zinc-300">{e.description ?? e.identifier}</td>
+                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">{e.path ?? "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </>
               )}
 
