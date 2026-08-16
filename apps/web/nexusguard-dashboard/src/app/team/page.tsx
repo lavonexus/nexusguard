@@ -17,7 +17,7 @@ const STRINGS: Dict<{
   subtitle: string;
   apiUnreachable: string;
   seatsFull: string;
-  discordUsername: string;
+  identifierPlaceholder: string;
   adding: string;
   add: string;
   user: string;
@@ -36,10 +36,10 @@ const STRINGS: Dict<{
     title: "Kurumsal",
     seatsLabel: "kişi",
     subtitle:
-      "Bu sunucuyu birlikte yönetecek ekip arkadaşlarını Discord kullanıcı adlarıyla ekle. Eklenecek kişinin daha önce en az bir kez Discord ile NexusGuard'a giriş yapmış olması gerekir.",
+      "Bu sunucuyu birlikte yönetecek ekip arkadaşlarını ekle: Discord ile giriş yapanları kullanıcı adıyla, Google ile giriş yapanları kayıtlı e-postalarıyla. Eklenecek kişinin daha önce en az bir kez NexusGuard'a giriş yapmış olması gerekir.",
     apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
     seatsFull: "Bu sunucunun {seats} kişilik kontenjanı dolu. Daha fazla kişi eklemek için Discord'dan daha yüksek kapasiteli bir Enterprise paketine geç.",
-    discordUsername: "Discord kullanıcı adı",
+    identifierPlaceholder: "Discord kullanıcı adı ya da Google e-postası",
     adding: "Ekleniyor...",
     add: "Ekle",
     user: "Kullanıcı",
@@ -58,10 +58,10 @@ const STRINGS: Dict<{
     title: "Enterprise",
     seatsLabel: "seats",
     subtitle:
-      "Add teammates who'll manage this server with you by their Discord username. Anyone you add must have signed in to NexusGuard with Discord at least once before.",
+      "Add teammates who'll manage this server with you: by Discord username for Discord logins, or by their registered email for Google logins. Anyone you add must have signed in to NexusGuard at least once before.",
     apiUnreachable: "Couldn't reach the NexusGuard API.",
     seatsFull: "This server's {seats}-seat capacity is full. To add more people, upgrade to a higher-capacity Enterprise package on Discord.",
-    discordUsername: "Discord username",
+    identifierPlaceholder: "Discord username or Google email",
     adding: "Adding...",
     add: "Add",
     user: "User",
@@ -192,23 +192,23 @@ function AddMemberForm({
 }: {
   apiKey: string;
   serverId: string;
-  t: { discordUsername: string; adding: string; add: string; apiUnreachable: string };
+  t: { identifierPlaceholder: string; adding: string; add: string; apiUnreachable: string };
   onAdded: (m: ServerMemberResponse) => void;
 }) {
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!identifier.trim()) return;
 
     setLoading(true);
     setError(null);
     try {
-      const member = await addMember(apiKey, serverId, username.trim());
+      const member = await addMember(apiKey, serverId, identifier.trim());
       onAdded(member);
-      setUsername("");
+      setIdentifier("");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
@@ -219,9 +219,9 @@ function AddMemberForm({
   return (
     <form onSubmit={handleSubmit} className="mt-6 flex gap-2">
       <input
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder={t.discordUsername}
+        value={identifier}
+        onChange={(e) => setIdentifier(e.target.value)}
+        placeholder={t.identifierPlaceholder}
         className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
       />
       <button

@@ -330,11 +330,13 @@ export function listMembers(apiKey: string, serverId: string) {
   });
 }
 
-export function addMember(apiKey: string, serverId: string, discordUsername: string) {
+// identifier is a Discord username or (for Google-only accounts) the email they registered
+// with - the API tells them apart by whether it contains "@".
+export function addMember(apiKey: string, serverId: string, identifier: string) {
   return request<ServerMemberResponse>(`/api/servers/${serverId}/members`, {
     method: "POST",
     headers: { "X-Api-Key": apiKey },
-    body: JSON.stringify({ discordUsername }),
+    body: JSON.stringify({ identifier }),
   });
 }
 

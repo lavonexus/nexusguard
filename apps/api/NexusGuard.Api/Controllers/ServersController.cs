@@ -162,13 +162,24 @@ public class ServersController : ControllerBase
         if (server.EffectivePlan != "Enterprise")
             return BadRequest("Team members require an active Enterprise plan.");
 
-        if (string.IsNullOrWhiteSpace(request.DiscordUsername))
-            return BadRequest("DiscordUsername is required.");
+        var identifier = request.Identifier?.Trim();
+        if (string.IsNullOrWhiteSpace(identifier))
+            return BadRequest("A Discord username or Google email is required.");
 
-        var user = await _db.Users.FirstOrDefaultAsync(
-            u => u.Username.ToLower() == request.DiscordUsername.Trim().ToLower());
+        // An "@" means they're pointing at the email they registered with (only ever
+        // populated by Google login, see User.cs) instead of a Discord username - same single
+        // field either way, no separate "how did they sign in" toggle for the owner to pick.
+        var isEmail = identifier.Contains('@');
+        var user = isEmail
+            ? await _db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == identifier.ToLower())
+            : await _db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == identifier.ToLower());
+
         if (user is null)
-            return NotFound("No NexusGuard user with that Discord username - they need to sign in with Discord at least once first.");
+        {
+            return NotFound(isEmail
+                ? "No NexusGuard user with that email - they need to sign in with Google at least once first."
+                : "No NexusGuard user with that Discord username - they need to sign in with Discord at least once first.");
+        }
 
         if (user.Id == server.OwnerUserId)
             return BadRequest("That user already owns this server.");

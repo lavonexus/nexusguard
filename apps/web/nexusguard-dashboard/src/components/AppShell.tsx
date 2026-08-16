@@ -11,6 +11,7 @@ import { useT, type Dict } from "@/lib/i18n/useT";
 import Logo from "@/components/Logo";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import PendingMembershipBanner from "@/components/PendingMembershipBanner";
 
 // Star positions are randomized client-side (Math.random(), see StarfieldBackground.tsx) -
 // purely decorative, so skipping SSR avoids a server/client hydration mismatch instead of
@@ -179,7 +180,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <StarfieldBackground />
       <div className="flex min-h-screen text-zinc-100">
         <DashboardSidebar />
-        <main className="min-w-0 flex-1 overflow-y-auto px-8 py-8">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto px-8 py-8">
+          <PendingMembershipBanner />
+          {children}
+        </main>
       </div>
     </ServerProvider>
   );

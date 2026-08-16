@@ -16,7 +16,9 @@ public record ServerResponse(
 
 public record ServerMemberResponse(Guid Id, Guid UserId, string Username, string Role, DateTime AddedAt);
 
-public record AddMemberRequest(string DiscordUsername);
+// A Discord username or (for Google-only accounts) the email they registered with - see
+// ServersController.AddMember for how the two are told apart.
+public record AddMemberRequest(string Identifier);
 
 // Same shape as ServerResponse plus the caller's relationship to it - GET /api/servers/mine
 // unions owned and member servers, and the dashboard needs to tell them apart (only an
