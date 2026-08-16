@@ -238,7 +238,13 @@ function ServerRow({
   if (!editing) {
     return (
       <tr>
-        <td className="px-4 py-2.5 font-medium text-zinc-200">{server.name}</td>
+        <td className="px-4 py-2.5 font-medium text-zinc-200">
+          {server.plan === "Enterprise" ? (
+            server.name
+          ) : (
+            <span className="text-zinc-400">Bireysel</span>
+          )}
+        </td>
         <td className="px-4 py-2.5 text-zinc-400">{server.ownerUsername}</td>
         <td className="px-4 py-2.5 text-zinc-300">
           {server.plan}

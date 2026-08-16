@@ -79,7 +79,31 @@ function SetupPageContent() {
           router.replace("/overview");
           return;
         }
-        setServers(list);
+
+        // The "pick or create a server" screen below is Enterprise-only real estate - a team
+        // actually needs to choose/name a shared server. Everyone else (Free/Pro/ProDuo) has
+        // exactly one personal workspace in practice, so skip the picker and drop them straight
+        // into the dashboard with their oldest one, same as a first-ever login would have.
+        const enterpriseServers = list.filter((s) => s.plan === "Enterprise");
+        if (enterpriseServers.length === 0) {
+          if (provisionStarted.current) return;
+          provisionStarted.current = true;
+          setAutoProvisioning(true);
+          const oldest = [...list].sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          )[0];
+          const { apiKey } = await rotateApiKeyAsOwner(oldest.id);
+          saveSession({
+            userId: currentUser!.id,
+            serverId: oldest.id,
+            serverName: oldest.name,
+            apiKey,
+          });
+          router.replace("/overview");
+          return;
+        }
+
+        setServers(enterpriseServers);
       })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 401) {
@@ -315,6 +339,9 @@ function ServerRow({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-zinc-200">{server.name}</span>
+            <span className="rounded border border-violet-800 bg-violet-950/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300">
+              Enterprise
+            </span>
             {server.role === "Member" && (
               <span className="rounded border border-violet-800 bg-violet-950/50 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
                 Ekip üyesi
