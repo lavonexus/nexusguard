@@ -45,7 +45,10 @@ export default function DashboardSidebar() {
   const initial = session?.serverName?.trim().charAt(0).toUpperCase() || "N";
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950">
+    <aside className="sidebar-stars relative flex h-screen w-64 shrink-0 flex-col overflow-hidden border-r border-violet-950/40">
+      <div className="pointer-events-none absolute -left-16 -top-24 -z-10 h-56 w-56 rounded-full bg-violet-700/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-1/2 -z-10 h-48 w-48 -translate-x-1/2 rounded-full bg-violet-900/10 blur-3xl" />
+
       <div className="flex items-center gap-2 px-5 py-5">
         <Logo className="h-6 w-6" />
         <span className="font-semibold tracking-tight text-white">NexusGuard</span>
@@ -61,7 +64,7 @@ export default function DashboardSidebar() {
                 key={link.href}
                 href={link.href}
                 className={`flex items-center justify-between rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-                  active ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
+                  active ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                 }`}
               >
                 {link.label}
@@ -80,7 +83,7 @@ export default function DashboardSidebar() {
           <Link
             href="/tool-designer"
             className={`block rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-              pathname === "/tool-designer" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
+              pathname === "/tool-designer" ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
             }`}
           >
             Tool Designer
@@ -102,7 +105,7 @@ export default function DashboardSidebar() {
           <Link
             href="/settings"
             className={`block rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-              pathname === "/settings" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
+              pathname === "/settings" ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
             }`}
           >
             Ayarlar
@@ -116,7 +119,7 @@ export default function DashboardSidebar() {
               <Link
                 href="/admin"
                 className={`flex items-center justify-between rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-                  pathname === "/admin" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
+                  pathname === "/admin" ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                 }`}
               >
                 Yönetici Paneli
@@ -141,9 +144,9 @@ export default function DashboardSidebar() {
         )}
       </nav>
 
-      <div className="border-t border-zinc-800 p-3">
+      <div className="border-t border-violet-950/40 p-3">
         <div className="flex items-center gap-2.5 rounded-md px-2 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600/20 text-sm font-semibold text-violet-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600/20 text-sm font-semibold text-violet-300 ring-1 ring-inset ring-violet-500/20">
             {initial}
           </div>
           <div className="min-w-0 flex-1">
@@ -159,13 +162,13 @@ export default function DashboardSidebar() {
         <div className="mt-1 flex flex-col gap-1 px-2">
           <button
             onClick={handleSwitchServer}
-            className="whitespace-nowrap rounded-md border border-zinc-800 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+            className="whitespace-nowrap rounded-md border border-white/10 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-violet-800/50 hover:text-zinc-200"
           >
             Sunucu değiştir
           </button>
           <button
             onClick={handleLogout}
-            className="whitespace-nowrap rounded-md border border-zinc-800 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+            className="whitespace-nowrap rounded-md border border-white/10 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-violet-800/50 hover:text-zinc-200"
           >
             Çıkış yap
           </button>
