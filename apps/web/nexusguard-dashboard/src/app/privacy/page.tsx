@@ -1,6 +1,9 @@
-import LegalDoc, { type LegalSection } from "@/components/LegalDoc";
+"use client";
 
-const SECTIONS: LegalSection[] = [
+import LegalDoc, { type LegalSection } from "@/components/LegalDoc";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+
+const SECTIONS_TR: LegalSection[] = [
   {
     id: "giris",
     label: "Giriş",
@@ -148,20 +151,188 @@ const SECTIONS: LegalSection[] = [
   },
 ];
 
+const SECTIONS_EN: LegalSection[] = [
+  {
+    id: "intro",
+    label: "Introduction",
+    body: (
+      <p>
+        NexusGuard is designed to collect as little data as possible and use it only for cheat
+        detection. This page explains what information is collected when the Scanner runs or
+        when you sign in to the dashboard, how it's stored, and who it's shared with (if anyone).
+      </p>
+    ),
+  },
+  {
+    id: "account-data",
+    label: "Account Data",
+    body: (
+      <>
+        <p>
+          When you sign in to the dashboard with Discord or Google, we only receive your
+          username, a unique ID, and (for Google sign-in) your email address from that provider.
+          We don't keep a separate password - authentication is handled entirely by Discord/Google.
+        </p>
+        <p>
+          Your session is kept in your browser via a cookie (ng_session); this cookie is only used
+          to remember which account you signed in with, never for advertising or third-party
+          tracking.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "scan-data",
+    label: "Data Collected During a Scan",
+    body: (
+      <>
+        <p>
+          Once a scan is verified with a PIN, the Scanner collects the following types of raw
+          data from that computer and sends it to the server: running processes and their
+          signatures/paths, modules loaded into the FiveM process, the name/size/hash of files in
+          certain folders, the internal content listing of FiveM-specific RPF archives, USB
+          storage history connected to that computer, programs that run at startup, scheduled
+          tasks, and services.
+        </p>
+        <p>
+          This list is defined in the Scanner's source code and may expand over time; but the
+          principle stays the same: the Scanner never decides on its own that something "is a
+          cheat" - it only reports what it saw. The decision is made by the server-side Detection
+          Engine that processes this raw data.
+        </p>
+        <p>
+          When a file's raw bytes are uploaded to the server for a YARA scan, that byte sequence is
+          only held temporarily for the duration of the scan and is deleted from disk as soon as
+          the scan finishes - it is never stored permanently.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "how-we-use-data",
+    label: "How We Use the Data",
+    body: (
+      <>
+        <p>
+          Collected scan data is evaluated by the Detection Engine and turned into a risk score
+          and a list of detections; this result is only shown to admins and authorized team
+          members on that server's dashboard. The scanned person never sees their own risk score
+          or detection details.
+        </p>
+        <p>
+          If a server admin chooses to, they can generate a short AI summary of the detected
+          findings - in that case, the detection descriptions (already-computed finding text, not
+          raw system data) are sent to Anthropic's API for summarization. No data goes to a third
+          party unless this feature is used.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "data-sharing",
+    label: "Data Sharing",
+    body: (
+      <p>
+        We never sell or rent your data for advertising. Data is only shared for the purposes
+        described above (Detection Engine evaluation, the optional AI summary) and with the
+        Discord/Google provider you used to sign in. We don't transfer your data to any other
+        third party unless legally required to.
+      </p>
+    ),
+  },
+  {
+    id: "retention",
+    label: "Data Retention",
+    body: (
+      <p>
+        Scan results are kept for as long as your account and its associated server remain
+        active. If you ask us to close your account, the historical scan records for servers
+        linked to that account are also permanently deleted. Contact us on Discord for deletion
+        requests.
+      </p>
+    ),
+  },
+  {
+    id: "your-rights",
+    label: "Your Rights as a Scanned Person",
+    body: (
+      <>
+        <p>
+          When you run the Scanner, you always know which server is scanning you - the PIN is
+          given to you by that server's admin, there's no hidden or background scan. You can find
+          out what's collected from this page.
+        </p>
+        <p>
+          If you want your own data deleted, you can contact the relevant server's admin, or reach
+          out to us directly on Discord.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "security",
+    label: "Security",
+    body: (
+      <p>
+        Your API keys and session tokens are stored in the database as one-way hashes, not plain
+        text - even we can't read an existing key or session token back, only verify it.
+      </p>
+    ),
+  },
+  {
+    id: "policy-updates",
+    label: "Policy Updates",
+    body: (
+      <p>
+        We may update this policy from time to time; for significant changes, we update the date
+        at the top of this page. Continuing to use the Service means you accept the current
+        policy.
+      </p>
+    ),
+  },
+  {
+    id: "contact",
+    label: "Contact Us",
+    body: <p>For questions about your data, you can message us on our Discord server.</p>,
+  },
+];
+
+const STRINGS = {
+  tr: {
+    title: "Gizlilik Politikası",
+    updatedLabel: "15 Ağustos 2026",
+    intro: (
+      <>
+        Gizliliğin bir tercih değil, bir gereklilik olduğunu düşünüyoruz. NexusGuard
+        kullanıcıları izlemek için değil, hileyi sunucu tarafında güvenilir şekilde tespit
+        etmek için var - bu sayfa, o amaç için hangi sınırlı verinin toplandığını ve neden
+        toplandığını açıklar.
+      </>
+    ),
+  },
+  en: {
+    title: "Privacy Policy",
+    updatedLabel: "August 15, 2026",
+    intro: (
+      <>
+        We believe privacy is a requirement, not an option. NexusGuard exists to reliably detect
+        cheating server-side, not to track users - this page explains what limited data is
+        collected for that purpose, and why.
+      </>
+    ),
+  },
+};
+
 export default function PrivacyPage() {
+  const { locale } = useLocale();
+  const t = STRINGS[locale];
+
   return (
     <LegalDoc
-      title="Gizlilik Politikası"
-      updatedLabel="15 Ağustos 2026"
-      intro={
-        <>
-          Gizliliğin bir tercih değil, bir gereklilik olduğunu düşünüyoruz. NexusGuard
-          kullanıcıları izlemek için değil, hileyi sunucu tarafında güvenilir şekilde tespit
-          etmek için var - bu sayfa, o amaç için hangi sınırlı verinin toplandığını ve neden
-          toplandığını açıklar.
-        </>
-      }
-      sections={SECTIONS}
+      title={t.title}
+      updatedLabel={t.updatedLabel}
+      intro={t.intro}
+      sections={locale === "en" ? SECTIONS_EN : SECTIONS_TR}
     />
   );
 }

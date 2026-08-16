@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Logo from "@/components/Logo";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 export interface LegalSection {
   id: string;
@@ -20,6 +21,7 @@ export default function LegalDoc({
   intro: React.ReactNode;
   sections: LegalSection[];
 }) {
+  const { locale } = useLocale();
   const [activeId, setActiveId] = useState(sections[0]?.id);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -46,7 +48,7 @@ export default function LegalDoc({
         <Logo className="h-8 w-8" />
         <h1 className="text-3xl font-semibold text-white sm:text-4xl">{title}</h1>
       </div>
-      <p className="mt-2 text-sm text-zinc-500">Son güncelleme: {updatedLabel}</p>
+      <p className="mt-2 text-sm text-zinc-500">{locale === "en" ? "Last updated" : "Son güncelleme"}: {updatedLabel}</p>
 
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[1fr_240px]">
         <div>
@@ -75,7 +77,7 @@ export default function LegalDoc({
           <div className="sticky top-24">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <MenuIcon className="h-3.5 w-3.5" />
-              Bu sayfada
+              {locale === "en" ? "On this page" : "Bu sayfada"}
             </div>
             <nav className="mt-3 space-y-1 border-l border-zinc-800">
               {sections.map((s) => (
