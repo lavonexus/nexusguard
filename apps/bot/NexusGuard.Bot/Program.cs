@@ -1,3 +1,4 @@
+using System.Net;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +11,14 @@ var config = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
     .AddEnvironmentVariables()
     .Build();
+
+// Render's free plan only offers Web Service, not Background Worker - this bot has no HTTP
+// surface of its own (it only opens an outbound WebSocket to Discord's gateway), so this
+// listener exists purely to answer Render's own health checks and count as "web" traffic.
+// Tradeoff: Render still spins a free web service down after ~15 min with no HTTP traffic,
+// which takes the Discord connection down with it - only worth it paired with an external
+// uptime pinger, or accepted as "the bot naturally goes offline when idle."
+StartHealthCheckListener();
 
 var botToken = config["Discord:BotToken"]
     ?? throw new InvalidOperationException("Discord:BotToken is not configured (set it via user-secrets locally, or Discord__BotToken in production).");
@@ -77,6 +86,43 @@ await client.LoginAsync(TokenType.Bot, botToken);
 await client.StartAsync();
 
 await Task.Delay(Timeout.Infinite);
+
+void StartHealthCheckListener()
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+    var listener = new HttpListener();
+    listener.Prefixes.Add($"http://+:{port}/");
+
+    try
+    {
+        listener.Start();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Health-check listener failed to start on port {port}: {ex.Message}");
+        return;
+    }
+
+    _ = Task.Run(async () =>
+    {
+        while (true)
+        {
+            try
+            {
+                var context = await listener.GetContextAsync();
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "text/plain";
+                var bytes = System.Text.Encoding.UTF8.GetBytes("NexusGuard bot is running.");
+                await context.Response.OutputStream.WriteAsync(bytes);
+                context.Response.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Health-check listener error: {ex.Message}");
+            }
+        }
+    });
+}
 
 async Task RegisterCommandsAsync(SocketGuild guild)
 {

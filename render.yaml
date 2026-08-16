@@ -65,7 +65,13 @@ services:
       - key: Steam__ApiKey
         sync: false
 
-  - type: worker
+  # Render's free plan doesn't offer Background Worker (confirmed on an actual deploy attempt -
+  # "service type is not available for this plan") - "web" is the free-tier workaround: the bot
+  # runs a bare HttpListener (see Program.cs's StartHealthCheckListener) purely so Render sees
+  # HTTP traffic and treats this as a web service. A real Background Worker plan would be the
+  # more reliable fix later, since a free web service still spins down after ~15 min idle,
+  # taking the Discord connection down with it.
+  - type: web
     name: nexusguard-bot
     runtime: docker
     dockerfilePath: ./apps/bot/NexusGuard.Bot/Dockerfile
