@@ -45,6 +45,7 @@ const STRINGS: Dict<{
   upgradeTitle: string;
   upgradeBody: string;
   switchServer: string;
+  returnHome: string;
   logout: string;
 }> = {
   tr: {
@@ -60,6 +61,7 @@ const STRINGS: Dict<{
     upgradeTitle: "Enterprise'a yükselt",
     upgradeBody: "Sunucuna birden fazla yönetici ekle, ekip halinde yönet.",
     switchServer: "Sunucu değiştir",
+    returnHome: "Ana sayfaya dön",
     logout: "Çıkış yap",
   },
   en: {
@@ -75,6 +77,7 @@ const STRINGS: Dict<{
     upgradeTitle: "Upgrade to Enterprise",
     upgradeBody: "Add multiple admins to your server and manage it as a team.",
     switchServer: "Switch server",
+    returnHome: "Return to home",
     logout: "Log out",
   },
 };
@@ -227,21 +230,61 @@ export default function DashboardSidebar() {
             </div>
           </div>
         </div>
-        <div className="mt-1 flex flex-col gap-1 px-2">
-          <button
-            onClick={handleSwitchServer}
-            className="whitespace-nowrap rounded-md border border-white/10 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-violet-800/50 hover:text-zinc-200"
+        <div className="mx-2 my-2 h-px bg-white/5" />
+
+        <div className="space-y-0.5 px-1">
+          {plan === "Enterprise" && (
+            <button
+              onClick={handleSwitchServer}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+            >
+              <SwitchServerIcon className="h-3.5 w-3.5 shrink-0" />
+              {t.switchServer}
+            </button>
+          )}
+          <Link
+            href="/"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
           >
-            {t.switchServer}
-          </button>
+            <HomeIcon className="h-3.5 w-3.5 shrink-0" />
+            {t.returnHome}
+          </Link>
           <button
             onClick={handleLogout}
-            className="whitespace-nowrap rounded-md border border-white/10 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-violet-800/50 hover:text-zinc-200"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
           >
+            <LogoutIcon className="h-3.5 w-3.5 shrink-0" />
             {t.logout}
           </button>
         </div>
       </div>
     </aside>
+  );
+}
+
+function SwitchServerIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 7h13l-3-3m3 3-3 3M21 17H8l3 3m-3-3 3-3" />
+    </svg>
+  );
+}
+
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m3 11 9-8 9 8" />
+      <path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10" />
+    </svg>
+  );
+}
+
+function LogoutIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="m16 17 5-5-5-5" />
+      <path d="M21 12H9" />
+    </svg>
   );
 }
