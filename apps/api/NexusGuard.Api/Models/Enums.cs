@@ -31,3 +31,9 @@ public enum ScanResultType
     Firmware,
     Steam
 }
+
+public enum SupportTicketStatus
+{
+    Open,
+    Closed
+}

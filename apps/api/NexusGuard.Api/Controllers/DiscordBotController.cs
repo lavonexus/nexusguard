@@ -1,7 +1,6 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NexusGuard.Api.Auth;
 using NexusGuard.Api.Database;
 using NexusGuard.Api.DTOs;
 using NexusGuard.Api.Models;
@@ -78,11 +77,7 @@ public class DiscordBotController : ControllerBase
 
     private bool IsAuthorizedBot()
     {
-        if (string.IsNullOrEmpty(_botSecret)) return false;
-        if (!Request.Headers.TryGetValue("X-Bot-Secret", out var provided)) return false;
-
-        var providedBytes = Encoding.UTF8.GetBytes(provided.ToString());
-        var expectedBytes = Encoding.UTF8.GetBytes(_botSecret);
-        return providedBytes.Length == expectedBytes.Length && CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes);
+        Request.Headers.TryGetValue("X-Bot-Secret", out var provided);
+        return BotSecretAuth.Matches(provided.ToString(), _botSecret);
     }
 }

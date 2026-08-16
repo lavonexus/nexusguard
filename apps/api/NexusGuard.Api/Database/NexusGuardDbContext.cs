@@ -19,6 +19,8 @@ public class NexusGuardDbContext : DbContext
     public DbSet<MarketplaceListing> MarketplaceListings => Set<MarketplaceListing>();
     public DbSet<MarketplaceReview> MarketplaceReviews => Set<MarketplaceReview>();
     public DbSet<DiscordGuildLink> DiscordGuildLinks => Set<DiscordGuildLink>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -164,6 +166,29 @@ public class NexusGuardDbContext : DbContext
             e.HasOne(l => l.Server)
                 .WithMany()
                 .HasForeignKey(l => l.ServerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupportTicket>(e =>
+        {
+            e.HasIndex(t => t.DiscordChannelId).IsUnique();
+            e.HasIndex(t => t.DiscordUserId);
+            e.Property(t => t.Category).IsRequired().HasMaxLength(64);
+            e.Property(t => t.DiscordUserId).IsRequired().HasMaxLength(32);
+            e.Property(t => t.ClosedByUsername).HasMaxLength(64);
+            e.Property(t => t.Status).HasConversion<string>().HasMaxLength(16);
+        });
+
+        modelBuilder.Entity<SupportTicketMessage>(e =>
+        {
+            e.HasIndex(m => new { m.SupportTicketId, m.DiscordMessageId }).IsUnique();
+            e.Property(m => m.AuthorDiscordId).IsRequired().HasMaxLength(32);
+            e.Property(m => m.AuthorUsername).IsRequired().HasMaxLength(64);
+            e.Property(m => m.AuthorAvatarUrl).HasMaxLength(512);
+            e.Property(m => m.Content).IsRequired().HasColumnType("text");
+            e.HasOne(m => m.SupportTicket)
+                .WithMany(t => t.Messages)
+                .HasForeignKey(m => m.SupportTicketId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

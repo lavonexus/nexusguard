@@ -59,6 +59,11 @@ services:
       # authenticates the bot's own endpoints (api/discord/*) instead of a per-server API key.
       - key: Discord__BotSharedSecret
         sync: false
+      # Authenticates the user's separate ticket bot (C:\Users\PC\Desktop\nexus-ticketbot, not
+      # part of this repo) against api/discord/tickets/* - a distinct secret from the scan-bot's
+      # own, entered into that bot's own config.json, never committed here.
+      - key: Discord__TicketBotSharedSecret
+        sync: false
       # Free key from steamcommunity.com/dev/apikey - used to resolve a SteamID64 the scanner
       # already read from the local Steam client's own registry key into a public display name/
       # avatar. Optional: if unset, Steam identity is simply never attached to a scan.
