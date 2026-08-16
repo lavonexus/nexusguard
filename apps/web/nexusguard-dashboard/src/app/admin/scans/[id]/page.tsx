@@ -6,11 +6,88 @@ import { useEffect, useState } from "react";
 import { ApiError, getAdminScan, type AdminScanDetailResponse, type DetectionResponse } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
 import StatusBadge from "@/components/StatusBadge";
+import { useLocale, type Locale } from "@/lib/i18n/LocaleContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
+
+type T = (typeof STRINGS)["tr"];
+
+const STRINGS: Dict<{
+  adminOnly: string;
+  backToAdmin: string;
+  loading: string;
+  apiUnreachable: string;
+  colServer: string;
+  colStartedBy: string;
+  colRiskScore: string;
+  colCreated: string;
+  detectionsTitle: string;
+  noRulesMatched: string;
+  colCategory: string;
+  colDescription: string;
+  colStatus: string;
+  colConfidence: string;
+  colWeight: string;
+  publisherLabel: string;
+  signedLabel: string;
+  unsignedLabel: string;
+  rawResultsTitle: string;
+  noResultsYet: string;
+  empty: string;
+}> = {
+  tr: {
+    adminOnly: "Bu sayfa sadece site yöneticisine özel",
+    backToAdmin: "← Yönetici Paneli'ne dön",
+    loading: "Yükleniyor...",
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    colServer: "Sunucu",
+    colStartedBy: "Başlatan",
+    colRiskScore: "Risk skoru",
+    colCreated: "Oluşturuldu",
+    detectionsTitle: "Tespitler",
+    noRulesMatched: "Hiçbir kural eşleşmedi.",
+    colCategory: "Kategori",
+    colDescription: "Açıklama",
+    colStatus: "Durum",
+    colConfidence: "Güven",
+    colWeight: "Ağırlık",
+    publisherLabel: "Yayıncı",
+    signedLabel: "İmzalı",
+    unsignedLabel: "İmzasız",
+    rawResultsTitle: "Ham sonuçlar",
+    noResultsYet: "Henüz sonuç gönderilmedi.",
+    empty: "Boş.",
+  },
+  en: {
+    adminOnly: "This page is for site admins only",
+    backToAdmin: "← Back to Admin Panel",
+    loading: "Loading...",
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    colServer: "Server",
+    colStartedBy: "Started by",
+    colRiskScore: "Risk score",
+    colCreated: "Created",
+    detectionsTitle: "Detections",
+    noRulesMatched: "No rules matched.",
+    colCategory: "Category",
+    colDescription: "Description",
+    colStatus: "Status",
+    colConfidence: "Confidence",
+    colWeight: "Weight",
+    publisherLabel: "Publisher",
+    signedLabel: "Signed",
+    unsignedLabel: "Unsigned",
+    rawResultsTitle: "Raw results",
+    noResultsYet: "No results submitted yet.",
+    empty: "Empty.",
+  },
+};
 
 export default function AdminScanDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { session, user, loading } = useServerContext();
+  const { locale } = useLocale();
+  const t = useT(STRINGS);
   const [detail, setDetail] = useState<AdminScanDetailResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,8 +101,8 @@ export default function AdminScanDetailPage() {
 
     getAdminScan(params.id)
       .then(setDetail)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, [session, user, loading, router, params.id]);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+  }, [session, user, loading, router, params.id, t.apiUnreachable]);
 
   if (loading || !session) return null;
 
@@ -35,7 +112,7 @@ export default function AdminScanDetailPage() {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-red-900/60 bg-red-950/30 text-red-400">
           🔒
         </div>
-        <h1 className="mt-4 text-xl font-semibold text-white">Bu sayfa sadece site yöneticisine özel</h1>
+        <h1 className="mt-4 text-xl font-semibold text-white">{t.adminOnly}</h1>
       </div>
     );
   }
@@ -43,7 +120,7 @@ export default function AdminScanDetailPage() {
   return (
     <div>
       <Link href="/admin" className="text-sm text-zinc-400 hover:text-zinc-200">
-        ← Yönetici Paneli&apos;ne dön
+        {t.backToAdmin}
       </Link>
 
       {error && (
@@ -52,7 +129,7 @@ export default function AdminScanDetailPage() {
         </p>
       )}
 
-      {!detail && !error && <p className="mt-6 text-sm text-zinc-500">Yükleniyor...</p>}
+      {!detail && !error && <p className="mt-6 text-sm text-zinc-500">{t.loading}</p>}
 
       {detail && (
         <>
@@ -62,28 +139,28 @@ export default function AdminScanDetailPage() {
           </div>
 
           <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-zinc-800 p-4 sm:grid-cols-4">
-            <Field label="Sunucu" value={detail.scan.serverName} />
-            <Field label="Başlatan" value={detail.scan.createdByUsername ?? "—"} />
-            <Field label="Risk skoru" value={detail.scan.riskScore?.toString() ?? "—"} />
-            <Field label="Oluşturuldu" value={formatDate(detail.scan.createdAt)} />
+            <Field label={t.colServer} value={detail.scan.serverName} />
+            <Field label={t.colStartedBy} value={detail.scan.createdByUsername ?? "—"} />
+            <Field label={t.colRiskScore} value={detail.scan.riskScore?.toString() ?? "—"} />
+            <Field label={t.colCreated} value={formatDate(detail.scan.createdAt, locale)} />
           </dl>
 
-          <h2 className="mt-8 text-sm font-semibold text-zinc-300">Tespitler ({detail.detections.length})</h2>
+          <h2 className="mt-8 text-sm font-semibold text-zinc-300">{t.detectionsTitle} ({detail.detections.length})</h2>
 
           {detail.detections.length === 0 ? (
             <p className="mt-3 rounded-lg border border-zinc-800 px-4 py-6 text-center text-sm text-zinc-500">
-              Hiçbir kural eşleşmedi.
+              {t.noRulesMatched}
             </p>
           ) : (
             <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-800">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="bg-zinc-900 text-zinc-400">
                   <tr>
-                    <th className="px-4 py-2 font-medium">Kategori</th>
-                    <th className="px-4 py-2 font-medium">Açıklama</th>
-                    <th className="px-4 py-2 font-medium">Durum</th>
-                    <th className="px-4 py-2 font-medium">Güven</th>
-                    <th className="px-4 py-2 font-medium">Ağırlık</th>
+                    <th className="px-4 py-2 font-medium">{t.colCategory}</th>
+                    <th className="px-4 py-2 font-medium">{t.colDescription}</th>
+                    <th className="px-4 py-2 font-medium">{t.colStatus}</th>
+                    <th className="px-4 py-2 font-medium">{t.colConfidence}</th>
+                    <th className="px-4 py-2 font-medium">{t.colWeight}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
@@ -98,17 +175,17 @@ export default function AdminScanDetailPage() {
                         <div className="mt-0.5 break-all font-mono text-xs text-zinc-500">{d.evidence}</div>
                         {(d.publisher || d.sha256) && (
                           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-zinc-600">
-                            {d.publisher && <span>Yayıncı: {d.publisher}</span>}
-                            {d.signed !== null && <span>{d.signed ? "İmzalı" : "İmzasız"}</span>}
+                            {d.publisher && <span>{t.publisherLabel}: {d.publisher}</span>}
+                            {d.signed !== null && <span>{d.signed ? t.signedLabel : t.unsignedLabel}</span>}
                             {d.sha256 && <span className="font-mono">SHA-256: {d.sha256.slice(0, 16)}…</span>}
                           </div>
                         )}
                       </td>
                       <td className="px-4 py-2.5 align-top">
-                        <DetectionStatusBadge status={d.status} />
+                        <DetectionStatusBadge status={d.status} locale={locale} />
                       </td>
                       <td className="px-4 py-2.5 align-top">
-                        <DetectionConfidenceBadge confidence={d.confidence} />
+                        <DetectionConfidenceBadge confidence={d.confidence} locale={locale} />
                       </td>
                       <td className="px-4 py-2.5 align-top text-zinc-400">{d.weight}</td>
                     </tr>
@@ -118,11 +195,11 @@ export default function AdminScanDetailPage() {
             </div>
           )}
 
-          <h2 className="mt-8 text-sm font-semibold text-zinc-300">Ham sonuçlar ({detail.results.length})</h2>
+          <h2 className="mt-8 text-sm font-semibold text-zinc-300">{t.rawResultsTitle} ({detail.results.length})</h2>
 
           {detail.results.length === 0 ? (
             <p className="mt-3 rounded-lg border border-zinc-800 px-4 py-6 text-center text-sm text-zinc-500">
-              Henüz sonuç gönderilmedi.
+              {t.noResultsYet}
             </p>
           ) : (
             <div className="mt-3 space-y-4">
@@ -134,10 +211,10 @@ export default function AdminScanDetailPage() {
                       <span className="text-sm font-medium text-zinc-200">
                         {result.resultType} <span className="text-zinc-500">({items.length})</span>
                       </span>
-                      <span className="text-xs text-zinc-500">{formatDate(result.createdAt)}</span>
+                      <span className="text-xs text-zinc-500">{formatDate(result.createdAt, locale)}</span>
                     </summary>
                     {items.length === 0 ? (
-                      <p className="px-4 py-3 text-sm text-zinc-500">Boş.</p>
+                      <p className="px-4 py-3 text-sm text-zinc-500">{t.empty}</p>
                     ) : (
                       <div className="max-h-64 overflow-y-auto">
                         <table className="w-full text-left text-sm">
@@ -189,9 +266,9 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, locale: Locale) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("tr-TR");
+  return new Date(value).toLocaleString(locale === "en" ? "en-US" : "tr-TR");
 }
 
 function DetectionCategoryBadge({ category }: { category: string }) {
@@ -202,11 +279,9 @@ function DetectionCategoryBadge({ category }: { category: string }) {
   );
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  Active: "Aktif",
-  Historical: "Geçmiş",
-  Removed: "Kaldırılmış",
-  Unknown: "Bilinmiyor",
+const STATUS_LABELS: Dict<Record<string, string>> = {
+  tr: { Active: "Aktif", Historical: "Geçmiş", Removed: "Kaldırılmış", Unknown: "Bilinmiyor" },
+  en: { Active: "Active", Historical: "Historical", Removed: "Removed", Unknown: "Unknown" },
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -216,20 +291,18 @@ const STATUS_STYLES: Record<string, string> = {
   Unknown: "border-zinc-700 bg-zinc-900 text-zinc-500",
 };
 
-function DetectionStatusBadge({ status }: { status: string }) {
+function DetectionStatusBadge({ status, locale }: { status: string; locale: Locale }) {
   const style = STATUS_STYLES[status] ?? STATUS_STYLES.Unknown;
   return (
     <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${style}`}>
-      {STATUS_LABELS[status] ?? status}
+      {STATUS_LABELS[locale][status] ?? status}
     </span>
   );
 }
 
-const CONFIDENCE_LABELS: Record<string, string> = {
-  Low: "Düşük",
-  Medium: "Orta",
-  High: "Yüksek",
-  Confirmed: "Doğrulanmış",
+const CONFIDENCE_LABELS: Dict<Record<string, string>> = {
+  tr: { Low: "Düşük", Medium: "Orta", High: "Yüksek", Confirmed: "Doğrulanmış" },
+  en: { Low: "Low", Medium: "Medium", High: "High", Confirmed: "Confirmed" },
 };
 
 const CONFIDENCE_STYLES: Record<string, string> = {
@@ -239,11 +312,11 @@ const CONFIDENCE_STYLES: Record<string, string> = {
   Confirmed: "border-red-700 text-red-400",
 };
 
-function DetectionConfidenceBadge({ confidence }: { confidence: string }) {
+function DetectionConfidenceBadge({ confidence, locale }: { confidence: string; locale: Locale }) {
   const style = CONFIDENCE_STYLES[confidence] ?? CONFIDENCE_STYLES.Low;
   return (
     <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium ${style}`}>
-      {CONFIDENCE_LABELS[confidence] ?? confidence}
+      {CONFIDENCE_LABELS[locale][confidence] ?? confidence}
     </span>
   );
 }

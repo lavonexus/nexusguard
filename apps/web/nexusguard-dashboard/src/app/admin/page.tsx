@@ -25,12 +25,266 @@ import {
 } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
 import StatusBadge from "@/components/StatusBadge";
+import { useLocale, type Locale } from "@/lib/i18n/LocaleContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
 
 type Tab = "users" | "servers" | "scans" | "marketplace";
+
+type T = (typeof STRINGS)["tr"];
+
+const STRINGS: Dict<{
+  adminOnlyTitle: string;
+  adminOnlyBody: string;
+  title: string;
+  subtitle: string;
+  tabServers: string;
+  tabUsers: string;
+  tabScans: string;
+  tabMarketplace: string;
+  apiUnreachable: string;
+  search: string;
+  loading: string;
+  noResults: string;
+  areYouSure: string;
+  cancel: string;
+  yesCancelPlan: string;
+  yesDelete: string;
+  individual: string;
+  seatsSuffix: string;
+  cancelPlanAction: string;
+  editPlan: string;
+  planLabel: string;
+  seatCount: string;
+  seatsOption: string;
+  duration: string;
+  save: string;
+  saving: string;
+  serverSearchPlaceholder: string;
+  colServer: string;
+  colOwner: string;
+  colPlan: string;
+  colMembers: string;
+  colEnds: string;
+  userSearchPlaceholder: string;
+  colUser: string;
+  colEmail: string;
+  colDiscordId: string;
+  colGoogle: string;
+  colRegistered: string;
+  linked: string;
+  you: string;
+  removeAdmin: string;
+  makeAdmin: string;
+  marketplaceIntro: string;
+  marketplaceSearchPlaceholder: string;
+  colTitle: string;
+  colAuthor: string;
+  colInstalls: string;
+  colRating: string;
+  colReviews: string;
+  colDate: string;
+  comments: string;
+  close: string;
+  noCommentsYet: string;
+  scansIntro: string;
+  scanSearchPlaceholder: string;
+  colPlayer: string;
+  colServerName: string;
+  colStartedBy: string;
+  colStatus: string;
+  colRisk: string;
+  colDetections: string;
+  detail: string;
+  delete: string;
+  statusAll: string;
+  statusPending: string;
+  statusInProgress: string;
+  statusCompleted: string;
+  statusExpired: string;
+  statusFailed: string;
+  statusCancelled: string;
+  week1: string;
+  week2: string;
+  week3: string;
+  month1: string;
+  month3: string;
+  month6: string;
+  year1: string;
+  indefinite: string;
+}> = {
+  tr: {
+    adminOnlyTitle: "Bu sayfa sadece site yöneticisine özel",
+    adminOnlyBody:
+      "Yönetici Paneli'ne erişimin yok. Bu bir hataysa mevcut site yöneticisinden hesabına admin yetkisi vermesini iste.",
+    title: "Yönetici Paneli",
+    subtitle:
+      "Tüm müşterileri ve sunucu planlarını buradan yönetiyorsun - satın alım Discord ticket'larından yapılıyor, ödeme onaylandıktan sonra planı burada tanımla.",
+    tabServers: "Sunucular & Planlar",
+    tabUsers: "Müşteriler",
+    tabScans: "Tarama Yönetimi",
+    tabMarketplace: "Mağaza",
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    search: "Ara",
+    loading: "Yükleniyor...",
+    noResults: "Sonuç bulunamadı.",
+    areYouSure: "Emin misin?",
+    cancel: "Vazgeç",
+    yesCancelPlan: "Evet, iptal et",
+    yesDelete: "Evet, sil",
+    individual: "Bireysel",
+    seatsSuffix: "kişilik",
+    cancelPlanAction: "İptal Et",
+    editPlan: "Planı Düzenle",
+    planLabel: "plan",
+    seatCount: "Kişi sayısı",
+    seatsOption: "kişilik",
+    duration: "Süre",
+    save: "Kaydet",
+    saving: "Kaydediliyor...",
+    serverSearchPlaceholder: "Sunucu adı ya da sahibinin kullanıcı adı ile ara",
+    colServer: "Sunucu",
+    colOwner: "Sahip",
+    colPlan: "Plan",
+    colMembers: "Üye",
+    colEnds: "Bitiş",
+    userSearchPlaceholder: "Kullanıcı adı ya da e-posta ile ara",
+    colUser: "Kullanıcı",
+    colEmail: "E-posta",
+    colDiscordId: "Discord ID",
+    colGoogle: "Google",
+    colRegistered: "Kayıt",
+    linked: "Bağlı",
+    you: "Sen",
+    removeAdmin: "Admin'i Kaldır",
+    makeAdmin: "Admin Yap",
+    marketplaceIntro:
+      "Tool Designer'da paylaşılan tüm mağaza tasarımları - onay mekanizması yok, yayınlanan tasarımlar hemen görünür oluyor. Uygunsuz bir tasarımı ya da yorumu buradan kaldır.",
+    marketplaceSearchPlaceholder: "Başlık ya da yazarın kullanıcı adı ile ara",
+    colTitle: "Başlık",
+    colAuthor: "Yazar",
+    colInstalls: "Kurulum",
+    colRating: "Puan",
+    colReviews: "Yorum",
+    colDate: "Tarih",
+    comments: "Yorumlar",
+    close: "Kapat",
+    noCommentsYet: "Bu tasarıma henüz yorum yapılmamış.",
+    scansIntro: "Platformdaki tüm sunucularda, tüm kullanıcılar tarafından yapılmış her tarama - kendi sunucundan bağımsız.",
+    scanSearchPlaceholder: "Oyuncu, sunucu ya da taramayı başlatan kullanıcı ile ara",
+    colPlayer: "Oyuncu",
+    colServerName: "Sunucu",
+    colStartedBy: "Başlatan",
+    colStatus: "Durum",
+    colRisk: "Risk",
+    colDetections: "Tespit",
+    detail: "Detay",
+    delete: "Sil",
+    statusAll: "Tümü",
+    statusPending: "Beklemede",
+    statusInProgress: "Devam ediyor",
+    statusCompleted: "Tamamlandı",
+    statusExpired: "Süresi doldu",
+    statusFailed: "Başarısız",
+    statusCancelled: "İptal edildi",
+    week1: "1 Hafta",
+    week2: "2 Hafta",
+    week3: "3 Hafta",
+    month1: "1 Ay",
+    month3: "3 Ay",
+    month6: "6 Ay",
+    year1: "1 Yıl",
+    indefinite: "Süresiz",
+  },
+  en: {
+    adminOnlyTitle: "This page is for site admins only",
+    adminOnlyBody:
+      "You don't have access to the Admin Panel. If this is a mistake, ask the current site admin to grant your account admin access.",
+    title: "Admin Panel",
+    subtitle:
+      "Manage all customers and server plans from here - purchases go through Discord tickets, apply the plan here once payment is confirmed.",
+    tabServers: "Servers & Plans",
+    tabUsers: "Customers",
+    tabScans: "Scan Management",
+    tabMarketplace: "Marketplace",
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    search: "Search",
+    loading: "Loading...",
+    noResults: "No results found.",
+    areYouSure: "Are you sure?",
+    cancel: "Cancel",
+    yesCancelPlan: "Yes, cancel",
+    yesDelete: "Yes, delete",
+    individual: "Individual",
+    seatsSuffix: "seats",
+    cancelPlanAction: "Cancel Plan",
+    editPlan: "Edit Plan",
+    planLabel: "plan",
+    seatCount: "Seat count",
+    seatsOption: "seats",
+    duration: "Duration",
+    save: "Save",
+    saving: "Saving...",
+    serverSearchPlaceholder: "Search by server name or owner's username",
+    colServer: "Server",
+    colOwner: "Owner",
+    colPlan: "Plan",
+    colMembers: "Members",
+    colEnds: "Ends",
+    userSearchPlaceholder: "Search by username or email",
+    colUser: "User",
+    colEmail: "Email",
+    colDiscordId: "Discord ID",
+    colGoogle: "Google",
+    colRegistered: "Registered",
+    linked: "Linked",
+    you: "You",
+    removeAdmin: "Remove Admin",
+    makeAdmin: "Make Admin",
+    marketplaceIntro:
+      "All marketplace designs shared in Tool Designer - no approval gate, published designs go live immediately. Take down an inappropriate design or comment from here.",
+    marketplaceSearchPlaceholder: "Search by title or author's username",
+    colTitle: "Title",
+    colAuthor: "Author",
+    colInstalls: "Installs",
+    colRating: "Rating",
+    colReviews: "Reviews",
+    colDate: "Date",
+    comments: "Comments",
+    close: "Close",
+    noCommentsYet: "This design has no comments yet.",
+    scansIntro: "Every scan run by every user across every server on the platform - independent of your own server.",
+    scanSearchPlaceholder: "Search by player, server, or the user who started the scan",
+    colPlayer: "Player",
+    colServerName: "Server",
+    colStartedBy: "Started by",
+    colStatus: "Status",
+    colRisk: "Risk",
+    colDetections: "Detections",
+    detail: "Details",
+    delete: "Delete",
+    statusAll: "All",
+    statusPending: "Pending",
+    statusInProgress: "In progress",
+    statusCompleted: "Completed",
+    statusExpired: "Expired",
+    statusFailed: "Failed",
+    statusCancelled: "Cancelled",
+    week1: "1 Week",
+    week2: "2 Weeks",
+    week3: "3 Weeks",
+    month1: "1 Month",
+    month3: "3 Months",
+    month6: "6 Months",
+    year1: "1 Year",
+    indefinite: "Indefinite",
+  },
+};
 
 export default function AdminPage() {
   const router = useRouter();
   const { session, user, loading } = useServerContext();
+  const { locale } = useLocale();
+  const t = useT(STRINGS);
   const [tab, setTab] = useState<Tab>("servers");
 
   useEffect(() => {
@@ -46,42 +300,36 @@ export default function AdminPage() {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-red-900/60 bg-red-950/30 text-red-400">
           🔒
         </div>
-        <h1 className="mt-4 text-xl font-semibold text-white">Bu sayfa sadece site yöneticisine özel</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Yönetici Paneli&apos;ne erişimin yok. Bu bir hataysa mevcut site yöneticisinden hesabına
-          admin yetkisi vermesini iste.
-        </p>
+        <h1 className="mt-4 text-xl font-semibold text-white">{t.adminOnlyTitle}</h1>
+        <p className="mt-2 text-sm text-zinc-400">{t.adminOnlyBody}</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-white">Yönetici Paneli</h1>
-      <p className="mt-1 text-sm text-zinc-400">
-        Tüm müşterileri ve sunucu planlarını buradan yönetiyorsun - satın alım Discord
-        ticket&apos;larından yapılıyor, ödeme onaylandıktan sonra planı burada tanımla.
-      </p>
+      <h1 className="text-xl font-semibold text-white">{t.title}</h1>
+      <p className="mt-1 text-sm text-zinc-400">{t.subtitle}</p>
 
       <div className="mt-6 flex gap-1 border-b border-zinc-800">
         <TabButton active={tab === "servers"} onClick={() => setTab("servers")}>
-          Sunucular &amp; Planlar
+          {t.tabServers}
         </TabButton>
         <TabButton active={tab === "users"} onClick={() => setTab("users")}>
-          Müşteriler
+          {t.tabUsers}
         </TabButton>
         <TabButton active={tab === "scans"} onClick={() => setTab("scans")}>
-          Tarama Yönetimi
+          {t.tabScans}
         </TabButton>
         <TabButton active={tab === "marketplace"} onClick={() => setTab("marketplace")}>
-          Mağaza
+          {t.tabMarketplace}
         </TabButton>
       </div>
 
-      {tab === "servers" && <ServersTab />}
-      {tab === "users" && <UsersTab currentUserId={user.id} />}
-      {tab === "scans" && <ScansTab />}
-      {tab === "marketplace" && <MarketplaceTab />}
+      {tab === "servers" && <ServersTab t={t} locale={locale} />}
+      {tab === "users" && <UsersTab currentUserId={user.id} t={t} locale={locale} />}
+      {tab === "scans" && <ScansTab t={t} locale={locale} />}
+      {tab === "marketplace" && <MarketplaceTab t={t} locale={locale} />}
     </div>
   );
 }
@@ -99,31 +347,36 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-const DURATION_PRESETS: { label: string; days: number | null }[] = [
-  { label: "1 Hafta", days: 7 },
-  { label: "2 Hafta", days: 14 },
-  { label: "3 Hafta", days: 21 },
-  { label: "1 Ay", days: 30 },
-  { label: "3 Ay", days: 90 },
-  { label: "6 Ay", days: 180 },
-  { label: "1 Yıl", days: 365 },
-  { label: "Süresiz", days: null },
-];
+function durationPresets(t: T): { label: string; days: number | null }[] {
+  return [
+    { label: t.week1, days: 7 },
+    { label: t.week2, days: 14 },
+    { label: t.week3, days: 21 },
+    { label: t.month1, days: 30 },
+    { label: t.month3, days: 90 },
+    { label: t.month6, days: 180 },
+    { label: t.year1, days: 365 },
+    { label: t.indefinite, days: null },
+  ];
+}
 
 const PLAN_OPTIONS: Plan[] = ["Free", "Pro", "ProDuo", "Enterprise"];
 const SEAT_OPTIONS = [5, 10, 15];
 
-function ServersTab() {
+function ServersTab({ t, locale }: { t: T; locale: Locale }) {
   const [query, setQuery] = useState("");
   const [servers, setServers] = useState<AdminServerResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const load = useCallback((q?: string) => {
-    listAdminServers(q)
-      .then(setServers)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, []);
+  const load = useCallback(
+    (q?: string) => {
+      listAdminServers(q)
+        .then(setServers)
+        .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+    },
+    [t.apiUnreachable]
+  );
 
   useEffect(() => {
     load();
@@ -140,11 +393,11 @@ function ServersTab() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Sunucu adı ya da sahibinin kullanıcı adı ile ara"
+          placeholder={t.serverSearchPlaceholder}
           className="w-full max-w-sm rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
         />
         <button type="submit" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600">
-          Ara
+          {t.search}
         </button>
       </form>
 
@@ -154,11 +407,11 @@ function ServersTab() {
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-900 text-zinc-400">
             <tr>
-              <th className="px-4 py-2 font-medium">Sunucu</th>
-              <th className="px-4 py-2 font-medium">Sahip</th>
-              <th className="px-4 py-2 font-medium">Plan</th>
-              <th className="px-4 py-2 font-medium">Üye</th>
-              <th className="px-4 py-2 font-medium">Bitiş</th>
+              <th className="px-4 py-2 font-medium">{t.colServer}</th>
+              <th className="px-4 py-2 font-medium">{t.colOwner}</th>
+              <th className="px-4 py-2 font-medium">{t.colPlan}</th>
+              <th className="px-4 py-2 font-medium">{t.colMembers}</th>
+              <th className="px-4 py-2 font-medium">{t.colEnds}</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -166,14 +419,14 @@ function ServersTab() {
             {servers === null && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                  Yükleniyor...
+                  {t.loading}
                 </td>
               </tr>
             )}
             {servers?.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                  Sonuç bulunamadı.
+                  {t.noResults}
                 </td>
               </tr>
             )}
@@ -188,6 +441,8 @@ function ServersTab() {
                   setServers((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? null);
                   setEditingId(null);
                 }}
+                t={t}
+                locale={locale}
               />
             ))}
           </tbody>
@@ -203,12 +458,16 @@ function ServerRow({
   onEdit,
   onCancel,
   onSaved,
+  t,
+  locale,
 }: {
   server: AdminServerResponse;
   editing: boolean;
   onEdit: () => void;
   onCancel: () => void;
   onSaved: (s: AdminServerResponse) => void;
+  t: T;
+  locale: Locale;
 }) {
   const [plan, setPlan] = useState<Plan>(server.plan);
   const [seats, setSeats] = useState<number>(server.enterpriseSeats ?? 10);
@@ -225,7 +484,7 @@ function ServerRow({
       const updated = await adminSetPlan(server.id, plan, plan === "Enterprise" ? seats : null, plan === "Free" ? null : durationDays);
       onSaved(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setSaving(false);
     }
@@ -238,7 +497,7 @@ function ServerRow({
       const updated = await adminCancelPlan(server.id);
       onSaved(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setCancelling(false);
       setConfirmingCancel(false);
@@ -252,34 +511,34 @@ function ServerRow({
           {server.plan === "Enterprise" ? (
             server.name
           ) : (
-            <span className="text-zinc-400">Bireysel</span>
+            <span className="text-zinc-400">{t.individual}</span>
           )}
         </td>
         <td className="px-4 py-2.5 text-zinc-400">{server.ownerUsername}</td>
         <td className="px-4 py-2.5 text-zinc-300">
           {server.plan}
-          {server.enterpriseSeats && <span className="text-zinc-500"> · {server.enterpriseSeats} kişilik</span>}
+          {server.enterpriseSeats && <span className="text-zinc-500"> · {server.enterpriseSeats} {t.seatsSuffix}</span>}
         </td>
         <td className="px-4 py-2.5 text-zinc-400">{server.memberCount}</td>
         <td className="px-4 py-2.5 text-zinc-500">
-          {server.planExpiresAt ? new Date(server.planExpiresAt).toLocaleDateString("tr-TR") : "—"}
+          {server.planExpiresAt ? new Date(server.planExpiresAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR") : "—"}
         </td>
         <td className="px-4 py-2.5 text-right">
           {confirmingCancel ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="text-xs text-zinc-500">Emin misin?</span>
+              <span className="text-xs text-zinc-500">{t.areYouSure}</span>
               <button
                 onClick={handleCancel}
                 disabled={cancelling}
                 className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
               >
-                {cancelling ? "..." : "Evet, iptal et"}
+                {cancelling ? "..." : t.yesCancelPlan}
               </button>
               <button
                 onClick={() => setConfirmingCancel(false)}
                 className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
               >
-                Vazgeç
+                {t.cancel}
               </button>
             </span>
           ) : (
@@ -289,14 +548,14 @@ function ServerRow({
                   onClick={() => setConfirmingCancel(true)}
                   className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
                 >
-                  İptal Et
+                  {t.cancelPlanAction}
                 </button>
               )}
               <button
                 onClick={onEdit}
                 className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300"
               >
-                Planı Düzenle
+                {t.editPlan}
               </button>
             </span>
           )}
@@ -311,7 +570,7 @@ function ServerRow({
       <td colSpan={6} className="bg-zinc-900/60 px-4 py-4">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <div className="text-xs text-zinc-500">{server.name} — plan</div>
+            <div className="text-xs text-zinc-500">{server.name} — {t.planLabel}</div>
             <select
               value={plan}
               onChange={(e) => setPlan(e.target.value as Plan)}
@@ -327,7 +586,7 @@ function ServerRow({
 
           {plan === "Enterprise" && (
             <div>
-              <div className="text-xs text-zinc-500">Kişi sayısı</div>
+              <div className="text-xs text-zinc-500">{t.seatCount}</div>
               <select
                 value={seats}
                 onChange={(e) => setSeats(Number(e.target.value))}
@@ -335,7 +594,7 @@ function ServerRow({
               >
                 {SEAT_OPTIONS.map((s) => (
                   <option key={s} value={s}>
-                    {s} kişilik
+                    {s} {t.seatsOption}
                   </option>
                 ))}
               </select>
@@ -344,9 +603,9 @@ function ServerRow({
 
           {plan !== "Free" && (
             <div>
-              <div className="text-xs text-zinc-500">Süre</div>
+              <div className="text-xs text-zinc-500">{t.duration}</div>
               <div className="mt-1 flex flex-wrap gap-1">
-                {DURATION_PRESETS.map((d) => (
+                {durationPresets(t).map((d) => (
                   <button
                     key={d.label}
                     onClick={() => setDurationDays(d.days)}
@@ -368,14 +627,14 @@ function ServerRow({
               onClick={onCancel}
               className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:border-zinc-600"
             >
-              Vazgeç
+              {t.cancel}
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
               className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
             >
-              {saving ? "Kaydediliyor..." : "Kaydet"}
+              {saving ? t.saving : t.save}
             </button>
           </div>
         </div>
@@ -385,16 +644,19 @@ function ServerRow({
   );
 }
 
-function UsersTab({ currentUserId }: { currentUserId: string }) {
+function UsersTab({ currentUserId, t, locale }: { currentUserId: string; t: T; locale: Locale }) {
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUserResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback((q?: string) => {
-    listAdminUsers(q)
-      .then(setUsers)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, []);
+  const load = useCallback(
+    (q?: string) => {
+      listAdminUsers(q)
+        .then(setUsers)
+        .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+    },
+    [t.apiUnreachable]
+  );
 
   useEffect(() => {
     load();
@@ -411,7 +673,7 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
       const updated = await setSiteAdmin(u.username, !u.isSiteAdmin);
       setUsers((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     }
   }
 
@@ -421,11 +683,11 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Kullanıcı adı ya da e-posta ile ara"
+          placeholder={t.userSearchPlaceholder}
           className="w-full max-w-sm rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
         />
         <button type="submit" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600">
-          Ara
+          {t.search}
         </button>
       </form>
 
@@ -435,11 +697,11 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-900 text-zinc-400">
             <tr>
-              <th className="px-4 py-2 font-medium">Kullanıcı</th>
-              <th className="px-4 py-2 font-medium">E-posta</th>
-              <th className="px-4 py-2 font-medium">Discord ID</th>
-              <th className="px-4 py-2 font-medium">Google</th>
-              <th className="px-4 py-2 font-medium">Kayıt</th>
+              <th className="px-4 py-2 font-medium">{t.colUser}</th>
+              <th className="px-4 py-2 font-medium">{t.colEmail}</th>
+              <th className="px-4 py-2 font-medium">{t.colDiscordId}</th>
+              <th className="px-4 py-2 font-medium">{t.colGoogle}</th>
+              <th className="px-4 py-2 font-medium">{t.colRegistered}</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -447,14 +709,14 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
             {users === null && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                  Yükleniyor...
+                  {t.loading}
                 </td>
               </tr>
             )}
             {users?.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                  Sonuç bulunamadı.
+                  {t.noResults}
                 </td>
               </tr>
             )}
@@ -470,11 +732,13 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
                 </td>
                 <td className="px-4 py-2.5 text-zinc-400">{u.email ?? "—"}</td>
                 <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">{u.discordId ?? "—"}</td>
-                <td className="px-4 py-2.5 text-zinc-500">{u.googleLinked ? "Bağlı" : "—"}</td>
-                <td className="px-4 py-2.5 text-zinc-500">{new Date(u.createdAt).toLocaleDateString("tr-TR")}</td>
+                <td className="px-4 py-2.5 text-zinc-500">{u.googleLinked ? t.linked : "—"}</td>
+                <td className="px-4 py-2.5 text-zinc-500">
+                  {new Date(u.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR")}
+                </td>
                 <td className="px-4 py-2.5 text-right">
                   {u.id === currentUserId ? (
-                    <span className="text-xs text-zinc-600">Sen</span>
+                    <span className="text-xs text-zinc-600">{t.you}</span>
                   ) : (
                     <button
                       onClick={() => toggleAdmin(u)}
@@ -484,7 +748,7 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
                           : "border-zinc-700 text-zinc-300 hover:border-amber-700 hover:text-amber-400"
                       }`}
                     >
-                      {u.isSiteAdmin ? "Admin'i Kaldır" : "Admin Yap"}
+                      {u.isSiteAdmin ? t.removeAdmin : t.makeAdmin}
                     </button>
                   )}
                 </td>
@@ -501,7 +765,7 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
 // MarketplaceController), so this is the only way to take down something inappropriate after
 // the fact. Reviews are only fetched (getMarketplaceListing) when a row is expanded, to avoid
 // N+1 requests for a tab that's mostly just browsed for listing titles/authors.
-function MarketplaceTab() {
+function MarketplaceTab({ t, locale }: { t: T; locale: Locale }) {
   const [query, setQuery] = useState("");
   const [listings, setListings] = useState<MarketplaceListingSummaryResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -514,11 +778,14 @@ function MarketplaceTab() {
   const [confirmingDeleteReviewId, setConfirmingDeleteReviewId] = useState<string | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
 
-  const load = useCallback((q?: string) => {
-    listMarketplaceListings(q)
-      .then(setListings)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, []);
+  const load = useCallback(
+    (q?: string) => {
+      listMarketplaceListings(q)
+        .then(setListings)
+        .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+    },
+    [t.apiUnreachable]
+  );
 
   useEffect(() => {
     load();
@@ -537,7 +804,7 @@ function MarketplaceTab() {
       setListings((prev) => prev?.filter((l) => l.id !== id) ?? null);
       if (expandedId === id) setExpandedId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setDeletingId(null);
       setConfirmingDeleteId(null);
@@ -556,7 +823,7 @@ function MarketplaceTab() {
       const detail = await getMarketplaceListing(id);
       setReviews(detail.reviews);
     } catch (err) {
-      setReviewsError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setReviewsError(err instanceof ApiError ? err.message : t.apiUnreachable);
     }
   }
 
@@ -570,7 +837,7 @@ function MarketplaceTab() {
         prev?.map((l) => (l.id === expandedId ? { ...l, reviewCount: l.reviewCount - 1 } : l)) ?? null
       );
     } catch (err) {
-      setReviewsError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setReviewsError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setDeletingReviewId(null);
       setConfirmingDeleteReviewId(null);
@@ -579,20 +846,17 @@ function MarketplaceTab() {
 
   return (
     <div className="mt-6">
-      <p className="text-sm text-zinc-400">
-        Tool Designer&apos;da paylaşılan tüm mağaza tasarımları - onay mekanizması yok, yayınlanan
-        tasarımlar hemen görünür oluyor. Uygunsuz bir tasarımı ya da yorumu buradan kaldır.
-      </p>
+      <p className="text-sm text-zinc-400">{t.marketplaceIntro}</p>
 
       <form onSubmit={handleSearch} className="mt-4 flex gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Başlık ya da yazarın kullanıcı adı ile ara"
+          placeholder={t.marketplaceSearchPlaceholder}
           className="w-full max-w-sm rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
         />
         <button type="submit" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600">
-          Ara
+          {t.search}
         </button>
       </form>
 
@@ -602,12 +866,12 @@ function MarketplaceTab() {
         <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="bg-zinc-900 text-zinc-400">
             <tr>
-              <th className="px-4 py-2 font-medium">Başlık</th>
-              <th className="px-4 py-2 font-medium">Yazar</th>
-              <th className="px-4 py-2 font-medium">Kurulum</th>
-              <th className="px-4 py-2 font-medium">Puan</th>
-              <th className="px-4 py-2 font-medium">Yorum</th>
-              <th className="px-4 py-2 font-medium">Tarih</th>
+              <th className="px-4 py-2 font-medium">{t.colTitle}</th>
+              <th className="px-4 py-2 font-medium">{t.colAuthor}</th>
+              <th className="px-4 py-2 font-medium">{t.colInstalls}</th>
+              <th className="px-4 py-2 font-medium">{t.colRating}</th>
+              <th className="px-4 py-2 font-medium">{t.colReviews}</th>
+              <th className="px-4 py-2 font-medium">{t.colDate}</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -615,14 +879,14 @@ function MarketplaceTab() {
             {listings === null && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-zinc-500">
-                  Yükleniyor...
+                  {t.loading}
                 </td>
               </tr>
             )}
             {listings?.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-zinc-500">
-                  Sonuç bulunamadı.
+                  {t.noResults}
                 </td>
               </tr>
             )}
@@ -634,23 +898,25 @@ function MarketplaceTab() {
                   <td className="px-4 py-2.5 text-zinc-400">{l.installCount}</td>
                   <td className="px-4 py-2.5 text-zinc-300">{l.reviewCount === 0 ? "—" : l.averageRating.toFixed(1)}</td>
                   <td className="px-4 py-2.5 text-zinc-400">{l.reviewCount}</td>
-                  <td className="px-4 py-2.5 text-zinc-500">{new Date(l.createdAt).toLocaleDateString("tr-TR")}</td>
+                  <td className="px-4 py-2.5 text-zinc-500">
+                    {new Date(l.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR")}
+                  </td>
                   <td className="px-4 py-2.5 text-right">
                     {confirmingDeleteId === l.id ? (
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="text-xs text-zinc-500">Emin misin?</span>
+                        <span className="text-xs text-zinc-500">{t.areYouSure}</span>
                         <button
                           onClick={() => handleDeleteListing(l.id)}
                           disabled={deletingId === l.id}
                           className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
                         >
-                          {deletingId === l.id ? "..." : "Evet, sil"}
+                          {deletingId === l.id ? "..." : t.yesDelete}
                         </button>
                         <button
                           onClick={() => setConfirmingDeleteId(null)}
                           className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
                         >
-                          Vazgeç
+                          {t.cancel}
                         </button>
                       </span>
                     ) : (
@@ -659,13 +925,13 @@ function MarketplaceTab() {
                           onClick={() => toggleExpand(l.id)}
                           className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300"
                         >
-                          {expandedId === l.id ? "Kapat" : "Yorumlar"}
+                          {expandedId === l.id ? t.close : t.comments}
                         </button>
                         <button
                           onClick={() => setConfirmingDeleteId(l.id)}
                           className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
                         >
-                          Sil
+                          {t.delete}
                         </button>
                       </span>
                     )}
@@ -676,10 +942,10 @@ function MarketplaceTab() {
                     <td colSpan={7} className="bg-zinc-900/60 px-4 py-3">
                       {reviewsError && <p className="text-xs text-red-400">{reviewsError}</p>}
                       {reviews === null && !reviewsError && (
-                        <p className="text-xs text-zinc-500">Yükleniyor...</p>
+                        <p className="text-xs text-zinc-500">{t.loading}</p>
                       )}
                       {reviews?.length === 0 && (
-                        <p className="text-xs text-zinc-500">Bu tasarıma henüz yorum yapılmamış.</p>
+                        <p className="text-xs text-zinc-500">{t.noCommentsYet}</p>
                       )}
                       {reviews && reviews.length > 0 && (
                         <div className="space-y-1.5">
@@ -698,13 +964,13 @@ function MarketplaceTab() {
                                     disabled={deletingReviewId === r.id}
                                     className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
                                   >
-                                    {deletingReviewId === r.id ? "..." : "Evet, sil"}
+                                    {deletingReviewId === r.id ? "..." : t.yesDelete}
                                   </button>
                                   <button
                                     onClick={() => setConfirmingDeleteReviewId(null)}
                                     className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
                                   >
-                                    Vazgeç
+                                    {t.cancel}
                                   </button>
                                 </span>
                               ) : (
@@ -712,7 +978,7 @@ function MarketplaceTab() {
                                   onClick={() => setConfirmingDeleteReviewId(r.id)}
                                   className="shrink-0 rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
                                 >
-                                  Sil
+                                  {t.delete}
                                 </button>
                               )}
                             </div>
@@ -731,20 +997,22 @@ function MarketplaceTab() {
   );
 }
 
-const SCAN_STATUS_OPTIONS: { label: string; value: string }[] = [
-  { label: "Tümü", value: "" },
-  { label: "Beklemede", value: "Pending" },
-  { label: "Devam ediyor", value: "InProgress" },
-  { label: "Tamamlandı", value: "Completed" },
-  { label: "Süresi doldu", value: "Expired" },
-  { label: "Başarısız", value: "Failed" },
-  { label: "İptal edildi", value: "Cancelled" },
-];
+function scanStatusOptions(t: T): { label: string; value: string }[] {
+  return [
+    { label: t.statusAll, value: "" },
+    { label: t.statusPending, value: "Pending" },
+    { label: t.statusInProgress, value: "InProgress" },
+    { label: t.statusCompleted, value: "Completed" },
+    { label: t.statusExpired, value: "Expired" },
+    { label: t.statusFailed, value: "Failed" },
+    { label: t.statusCancelled, value: "Cancelled" },
+  ];
+}
 
 // Cross-server - every scan any server has ever run, not just one team's own (see the
 // [id] detail page and AdminController.ListScans/DeleteScan). Distinct from /scans, which
 // only ever shows the currently-selected server's own scans to that server's own admins.
-function ScansTab() {
+function ScansTab({ t, locale }: { t: T; locale: Locale }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [scans, setScans] = useState<AdminScanSummaryResponse[] | null>(null);
@@ -752,11 +1020,14 @@ function ScansTab() {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const load = useCallback((q?: string, s?: string) => {
-    listAdminScans(q, s)
-      .then(setScans)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, []);
+  const load = useCallback(
+    (q?: string, s?: string) => {
+      listAdminScans(q, s)
+        .then(setScans)
+        .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+    },
+    [t.apiUnreachable]
+  );
 
   useEffect(() => {
     load();
@@ -774,7 +1045,7 @@ function ScansTab() {
       await deleteAdminScan(id);
       setScans((prev) => prev?.filter((s) => s.id !== id) ?? null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setDeletingId(null);
       setConfirmingDeleteId(null);
@@ -783,16 +1054,13 @@ function ScansTab() {
 
   return (
     <div className="mt-6">
-      <p className="text-sm text-zinc-400">
-        Platformdaki tüm sunucularda, tüm kullanıcılar tarafından yapılmış her tarama - kendi
-        sunucundan bağımsız.
-      </p>
+      <p className="text-sm text-zinc-400">{t.scansIntro}</p>
 
       <form onSubmit={handleSearch} className="mt-4 flex flex-wrap gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Oyuncu, sunucu ya da taramayı başlatan kullanıcı ile ara"
+          placeholder={t.scanSearchPlaceholder}
           className="w-full max-w-sm rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
         />
         <select
@@ -800,14 +1068,14 @@ function ScansTab() {
           onChange={(e) => setStatus(e.target.value)}
           className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-2 text-sm text-zinc-200 outline-none focus:border-violet-600"
         >
-          {SCAN_STATUS_OPTIONS.map((o) => (
+          {scanStatusOptions(t).map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
         <button type="submit" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600">
-          Ara
+          {t.search}
         </button>
       </form>
 
@@ -817,13 +1085,13 @@ function ScansTab() {
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="bg-zinc-900 text-zinc-400">
             <tr>
-              <th className="px-4 py-2 font-medium">Oyuncu</th>
-              <th className="px-4 py-2 font-medium">Sunucu</th>
-              <th className="px-4 py-2 font-medium">Başlatan</th>
-              <th className="px-4 py-2 font-medium">Durum</th>
-              <th className="px-4 py-2 font-medium">Risk</th>
-              <th className="px-4 py-2 font-medium">Tespit</th>
-              <th className="px-4 py-2 font-medium">Tarih</th>
+              <th className="px-4 py-2 font-medium">{t.colPlayer}</th>
+              <th className="px-4 py-2 font-medium">{t.colServerName}</th>
+              <th className="px-4 py-2 font-medium">{t.colStartedBy}</th>
+              <th className="px-4 py-2 font-medium">{t.colStatus}</th>
+              <th className="px-4 py-2 font-medium">{t.colRisk}</th>
+              <th className="px-4 py-2 font-medium">{t.colDetections}</th>
+              <th className="px-4 py-2 font-medium">{t.colDate}</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -831,14 +1099,14 @@ function ScansTab() {
             {scans === null && (
               <tr>
                 <td colSpan={8} className="px-4 py-6 text-center text-zinc-500">
-                  Yükleniyor...
+                  {t.loading}
                 </td>
               </tr>
             )}
             {scans?.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-6 text-center text-zinc-500">
-                  Sonuç bulunamadı.
+                  {t.noResults}
                 </td>
               </tr>
             )}
@@ -852,23 +1120,25 @@ function ScansTab() {
                 </td>
                 <td className="px-4 py-2.5 text-zinc-300">{s.riskScore ?? "—"}</td>
                 <td className="px-4 py-2.5 text-zinc-400">{s.detectionCount}</td>
-                <td className="px-4 py-2.5 text-zinc-500">{new Date(s.createdAt).toLocaleString("tr-TR")}</td>
+                <td className="px-4 py-2.5 text-zinc-500">
+                  {new Date(s.createdAt).toLocaleString(locale === "en" ? "en-US" : "tr-TR")}
+                </td>
                 <td className="px-4 py-2.5 text-right">
                   {confirmingDeleteId === s.id ? (
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="text-xs text-zinc-500">Emin misin?</span>
+                      <span className="text-xs text-zinc-500">{t.areYouSure}</span>
                       <button
                         onClick={() => handleDelete(s.id)}
                         disabled={deletingId === s.id}
                         className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
                       >
-                        {deletingId === s.id ? "..." : "Evet, sil"}
+                        {deletingId === s.id ? "..." : t.yesDelete}
                       </button>
                       <button
                         onClick={() => setConfirmingDeleteId(null)}
                         className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
                       >
-                        Vazgeç
+                        {t.cancel}
                       </button>
                     </span>
                   ) : (
@@ -877,13 +1147,13 @@ function ScansTab() {
                         href={`/admin/scans/${s.id}`}
                         className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300"
                       >
-                        Detay
+                        {t.detail}
                       </Link>
                       <button
                         onClick={() => setConfirmingDeleteId(s.id)}
                         className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
                       >
-                        Sil
+                        {t.delete}
                       </button>
                     </span>
                   )}
