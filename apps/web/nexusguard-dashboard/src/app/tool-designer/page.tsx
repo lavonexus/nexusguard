@@ -15,6 +15,8 @@ import {
   type ScannerTheme,
 } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
 
 const DEFAULT_THEME: ScannerTheme = {
   primaryTextColor: "#F5F3FF",
@@ -36,23 +38,105 @@ const DEFAULT_THEME: ScannerTheme = {
   showWatermark: true,
 };
 
-const STAGES = [
-  { key: "pin", label: "PIN Girişi" },
-  { key: "early", label: "Erken" },
-  { key: "scanning", label: "Tarama" },
-  { key: "deep", label: "Derin" },
-  { key: "detection", label: "Tespit" },
-  { key: "done", label: "Tamamlandı" },
-] as const;
-type StageKey = (typeof STAGES)[number]["key"];
+type StageKey = "pin" | "early" | "scanning" | "deep" | "detection" | "done";
+
+const STAGES: Dict<{ key: StageKey; label: string }[]> = {
+  tr: [
+    { key: "pin", label: "PIN Girişi" },
+    { key: "early", label: "Erken" },
+    { key: "scanning", label: "Tarama" },
+    { key: "deep", label: "Derin" },
+    { key: "detection", label: "Tespit" },
+    { key: "done", label: "Tamamlandı" },
+  ],
+  en: [
+    { key: "pin", label: "PIN Entry" },
+    { key: "early", label: "Early" },
+    { key: "scanning", label: "Scanning" },
+    { key: "deep", label: "Deep" },
+    { key: "detection", label: "Detection" },
+    { key: "done", label: "Done" },
+  ],
+};
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 type Tab = "palette" | "labels" | "branding" | "options" | "library";
 
+const STRINGS: Dict<{
+  subtitle: string;
+  saving: string;
+  saved: string;
+  saveDesign: string;
+  apiUnreachable: string;
+  freePlanNotice: string;
+  freePlanSaveButton: string;
+  freePlanNoticeSuffix: string;
+  upgradeNotSaved: string;
+  upgradeToPro: string;
+  loading: string;
+  tabPalette: string;
+  tabLabels: string;
+  tabBranding: string;
+  tabOptions: string;
+  tabLibrary: string;
+  quickActions: string;
+  invert: string;
+  randomize: string;
+  reset: string;
+}> = {
+  tr: {
+    subtitle: "Scanner.exe'nin renklerini, metinlerini ve markasını özelleştir — değişiklikler önizlemede anında görünür.",
+    saving: "Kaydediliyor...",
+    saved: "Kaydedildi",
+    saveDesign: "Tasarımı Kaydet",
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    freePlanNotice: "Free planda Tool Designer'ı görüntüleyip düzenleyebilirsin, ama",
+    freePlanSaveButton: "Tasarımı Kaydet",
+    freePlanNoticeSuffix: "'e bastığında değişiklikler kalıcı olarak saklanmaz.",
+    upgradeNotSaved: "Bu değişiklikler kaydedilmedi - Tool Designer'da yapılan özelleştirmeleri saklamak için Free plan yeterli değil.",
+    upgradeToPro: "PRO'ya geç →",
+    loading: "Yükleniyor...",
+    tabPalette: "Palet",
+    tabLabels: "Etiketler",
+    tabBranding: "Marka",
+    tabOptions: "Seçenekler",
+    tabLibrary: "Kütüphanem",
+    quickActions: "Hızlı işlemler",
+    invert: "⇅ Ters Çevir",
+    randomize: "🎲 Rastgele",
+    reset: "🗑 Sıfırla",
+  },
+  en: {
+    subtitle: "Customize Scanner.exe's colors, text, and branding — changes appear instantly in the preview.",
+    saving: "Saving...",
+    saved: "Saved",
+    saveDesign: "Save Design",
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    freePlanNotice: "On the Free plan you can view and edit Tool Designer, but pressing",
+    freePlanSaveButton: "Save Design",
+    freePlanNoticeSuffix: "won't persist your changes.",
+    upgradeNotSaved: "These changes weren't saved - the Free plan isn't enough to persist Tool Designer customizations.",
+    upgradeToPro: "Upgrade to PRO →",
+    loading: "Loading...",
+    tabPalette: "Palette",
+    tabLabels: "Labels",
+    tabBranding: "Branding",
+    tabOptions: "Options",
+    tabLibrary: "My Library",
+    quickActions: "Quick actions",
+    invert: "⇅ Invert",
+    randomize: "🎲 Randomize",
+    reset: "🗑 Reset",
+  },
+};
+
 export default function ToolDesignerPage() {
   const router = useRouter();
   const { session, server, loading } = useServerContext();
+  const { locale } = useLocale();
+  const t = useT(STRINGS);
+  const stages = useT(STAGES);
   const [theme, setTheme] = useState<ScannerTheme | null>(null);
   const [tab, setTab] = useState<Tab>("palette");
   const [previewStage, setPreviewStage] = useState<StageKey>("pin");
@@ -69,8 +153,8 @@ export default function ToolDesignerPage() {
     }
     getScannerTheme(session.apiKey, session.serverId)
       .then(setTheme)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, [session, loading, router]);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+  }, [session, loading, router, t.apiUnreachable]);
 
   function patch(update: Partial<ScannerTheme>) {
     setTheme((t) => (t ? { ...t, ...update } : t));
@@ -93,7 +177,7 @@ export default function ToolDesignerPage() {
       if (err instanceof ApiError && err.status === 402) {
         setUpgradePrompt(true);
       } else {
-        setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+        setError(err instanceof ApiError ? err.message : t.apiUnreachable);
       }
     } finally {
       setSaving(false);
@@ -135,35 +219,29 @@ export default function ToolDesignerPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-white">Tool Designer</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Scanner.exe&apos;nin renklerini, metinlerini ve markasını özelleştir — değişiklikler önizlemede anında görünür.
-          </p>
+          <p className="mt-1 text-sm text-zinc-400">{t.subtitle}</p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving || !theme}
           className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? "Kaydediliyor..." : saved ? "Kaydedildi" : "Tasarımı Kaydet"}
+          {saving ? t.saving : saved ? t.saved : t.saveDesign}
         </button>
       </div>
 
       {server?.plan === "Free" && !upgradePrompt && (
         <p className="mt-4 rounded-md border border-violet-900/50 bg-violet-950/20 px-3 py-2 text-sm text-violet-300">
-          Free planda Tool Designer&apos;ı görüntüleyip düzenleyebilirsin, ama{" "}
-          <strong>Tasarımı Kaydet</strong>&apos;e bastığında değişiklikler kalıcı olarak
-          saklanmaz.
+          {t.freePlanNotice} <strong>{t.freePlanSaveButton}</strong>
+          {t.freePlanNoticeSuffix}
         </p>
       )}
 
       {upgradePrompt && (
         <div className="mt-4 rounded-md border border-amber-800/60 bg-amber-950/20 px-3 py-2.5 text-sm text-amber-200">
-          <p>
-            Bu değişiklikler kaydedilmedi - Tool Designer&apos;da yapılan özelleştirmeleri
-            saklamak için Free plan yeterli değil.
-          </p>
+          <p>{t.upgradeNotSaved}</p>
           <Link href="/pricing" className="mt-2 inline-block font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200">
-            PRO&apos;ya geç →
+            {t.upgradeToPro}
           </Link>
         </div>
       )}
@@ -173,7 +251,7 @@ export default function ToolDesignerPage() {
       )}
 
       {!theme ? (
-        <p className="mt-8 text-sm text-zinc-500">Yükleniyor...</p>
+        <p className="mt-8 text-sm text-zinc-500">{t.loading}</p>
       ) : (
         <>
           <div className="mt-6 overflow-hidden rounded-xl border border-zinc-800">
@@ -181,7 +259,7 @@ export default function ToolDesignerPage() {
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {STAGES.map((s) => (
+            {stages.map((s) => (
               <button
                 key={s.key}
                 onClick={() => setPreviewStage(s.key)}
@@ -197,32 +275,32 @@ export default function ToolDesignerPage() {
           </div>
 
           <div className="mt-6 flex gap-1 border-b border-zinc-800">
-            <TabButton active={tab === "palette"} onClick={() => setTab("palette")} label="Palet" />
-            <TabButton active={tab === "labels"} onClick={() => setTab("labels")} label="Etiketler" />
-            <TabButton active={tab === "branding"} onClick={() => setTab("branding")} label="Marka" />
-            <TabButton active={tab === "options"} onClick={() => setTab("options")} label="Seçenekler" />
-            <TabButton active={tab === "library"} onClick={() => setTab("library")} label="Kütüphanem" />
+            <TabButton active={tab === "palette"} onClick={() => setTab("palette")} label={t.tabPalette} />
+            <TabButton active={tab === "labels"} onClick={() => setTab("labels")} label={t.tabLabels} />
+            <TabButton active={tab === "branding"} onClick={() => setTab("branding")} label={t.tabBranding} />
+            <TabButton active={tab === "options"} onClick={() => setTab("options")} label={t.tabOptions} />
+            <TabButton active={tab === "library"} onClick={() => setTab("library")} label={t.tabLibrary} />
           </div>
 
           <div className="mt-6">
-            {tab === "palette" && <PaletteTab theme={theme} onChange={patch} />}
-            {tab === "labels" && <LabelsTab theme={theme} onChange={patch} />}
-            {tab === "branding" && <BrandingTab theme={theme} onChange={patch} />}
-            {tab === "options" && <OptionsTab theme={theme} onChange={patch} />}
-            {tab === "library" && <LibraryTab theme={theme} onApply={setTheme} />}
+            {tab === "palette" && <PaletteTab theme={theme} onChange={patch} locale={locale} />}
+            {tab === "labels" && <LabelsTab theme={theme} onChange={patch} locale={locale} />}
+            {tab === "branding" && <BrandingTab theme={theme} onChange={patch} locale={locale} />}
+            {tab === "options" && <OptionsTab theme={theme} onChange={patch} locale={locale} />}
+            {tab === "library" && <LibraryTab theme={theme} onApply={setTheme} locale={locale} />}
           </div>
 
           <div className="mt-8 flex items-center justify-between border-t border-zinc-900 pt-4 text-xs text-zinc-600">
-            <span>Hızlı işlemler</span>
+            <span>{t.quickActions}</span>
             <div className="flex gap-2">
               <button onClick={handleInvert} className="rounded-md border border-zinc-800 px-3 py-1.5 text-zinc-300 hover:border-zinc-700">
-                ⇅ Ters Çevir
+                {t.invert}
               </button>
               <button onClick={handleRandomize} className="rounded-md border border-zinc-800 px-3 py-1.5 text-zinc-300 hover:border-zinc-700">
-                🎲 Rastgele
+                {t.randomize}
               </button>
               <button onClick={handleReset} className="rounded-md border border-red-900 px-3 py-1.5 text-red-400 hover:border-red-800">
-                🗑 Sıfırla
+                {t.reset}
               </button>
             </div>
           </div>
@@ -245,20 +323,39 @@ function TabButton({ active, onClick, label }: { active: boolean; onClick: () =>
   );
 }
 
-const COLOR_FIELDS: { key: keyof ScannerTheme; label: string; desc: string }[] = [
-  { key: "primaryTextColor", label: "Ana Metin", desc: "Ana metin rengi" },
-  { key: "secondaryTextColor", label: "İkincil Metin", desc: "İpuçları ve alt başlıklar" },
-  { key: "backgroundColor", label: "Arka Plan", desc: "Ana arka plan" },
-  { key: "surfaceColor", label: "Yüzey", desc: "Kart yüzeyleri" },
-  { key: "titleBarColor", label: "Başlık Çubuğu", desc: "Pencere başlık çubuğu" },
-  { key: "accentColor", label: "Vurgu", desc: "Odak ve vurgular" },
-  { key: "progressColor", label: "İlerleme", desc: "İlerleme göstergesi" },
-];
+const COLOR_FIELDS: Dict<{ key: keyof ScannerTheme; label: string; desc: string }[]> = {
+  tr: [
+    { key: "primaryTextColor", label: "Ana Metin", desc: "Ana metin rengi" },
+    { key: "secondaryTextColor", label: "İkincil Metin", desc: "İpuçları ve alt başlıklar" },
+    { key: "backgroundColor", label: "Arka Plan", desc: "Ana arka plan" },
+    { key: "surfaceColor", label: "Yüzey", desc: "Kart yüzeyleri" },
+    { key: "titleBarColor", label: "Başlık Çubuğu", desc: "Pencere başlık çubuğu" },
+    { key: "accentColor", label: "Vurgu", desc: "Odak ve vurgular" },
+    { key: "progressColor", label: "İlerleme", desc: "İlerleme göstergesi" },
+  ],
+  en: [
+    { key: "primaryTextColor", label: "Primary Text", desc: "Main text color" },
+    { key: "secondaryTextColor", label: "Secondary Text", desc: "Hints and subtitles" },
+    { key: "backgroundColor", label: "Background", desc: "Main background" },
+    { key: "surfaceColor", label: "Surface", desc: "Card surfaces" },
+    { key: "titleBarColor", label: "Title Bar", desc: "Window title bar" },
+    { key: "accentColor", label: "Accent", desc: "Focus and highlights" },
+    { key: "progressColor", label: "Progress", desc: "Progress indicator" },
+  ],
+};
 
-function PaletteTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Partial<ScannerTheme>) => void }) {
+function PaletteTab({
+  theme,
+  onChange,
+  locale,
+}: {
+  theme: ScannerTheme;
+  onChange: (u: Partial<ScannerTheme>) => void;
+  locale: "tr" | "en";
+}) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {COLOR_FIELDS.map((f) => (
+      {COLOR_FIELDS[locale].map((f) => (
         <div key={f.key} className="flex items-center gap-3 rounded-lg border border-zinc-800 p-3">
           <label className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-md border border-zinc-700" style={{ backgroundColor: theme[f.key] as string }}>
             <input
@@ -283,8 +380,8 @@ function PaletteTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Pa
   );
 }
 
-function LabelsTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Partial<ScannerTheme>) => void }) {
-  const fields: { key: keyof ScannerTheme; label: string; hint?: string; placeholder: string }[] = [
+const LABEL_FIELDS: Dict<{ key: keyof ScannerTheme; label: string; hint?: string; placeholder: string }[]> = {
+  tr: [
     { key: "pinTitle", label: "PIN İstemi", placeholder: "Enter a PIN" },
     { key: "pinSubtitle", label: "PIN Alt Başlığı", placeholder: "Get this from whoever asked you to run a scan." },
     { key: "stageEarlyText", label: "Erken Aşama", placeholder: "(varsayılan: gerçek adım metni)" },
@@ -293,7 +390,29 @@ function LabelsTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Par
     { key: "stageDetectionText", label: "Tespit Aşaması", hint: "%c = geçerli, %t = toplam", placeholder: "(varsayılan: gerçek adım metni)" },
     { key: "completedTitle", label: "Tamamlandı", placeholder: "Scan complete" },
     { key: "completedSubtitle", label: "Tamamlandı Alt Başlığı", placeholder: "Thanks - the results have been sent..." },
-  ];
+  ],
+  en: [
+    { key: "pinTitle", label: "PIN Prompt", placeholder: "Enter a PIN" },
+    { key: "pinSubtitle", label: "PIN Subtitle", placeholder: "Get this from whoever asked you to run a scan." },
+    { key: "stageEarlyText", label: "Early Stage", placeholder: "(default: actual step text)" },
+    { key: "stageScanningText", label: "Scanning Stage", placeholder: "(default: actual step text)" },
+    { key: "stageDeepText", label: "Deep Scan", placeholder: "(default: actual step text)" },
+    { key: "stageDetectionText", label: "Detection Stage", hint: "%c = current, %t = total", placeholder: "(default: actual step text)" },
+    { key: "completedTitle", label: "Completed", placeholder: "Scan complete" },
+    { key: "completedSubtitle", label: "Completed Subtitle", placeholder: "Thanks - the results have been sent..." },
+  ],
+};
+
+function LabelsTab({
+  theme,
+  onChange,
+  locale,
+}: {
+  theme: ScannerTheme;
+  onChange: (u: Partial<ScannerTheme>) => void;
+  locale: "tr" | "en";
+}) {
+  const fields = LABEL_FIELDS[locale];
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -319,18 +438,53 @@ function LabelsTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Par
   );
 }
 
-function BrandingTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Partial<ScannerTheme>) => void }) {
+const BRANDING_STRINGS: Dict<{
+  scannerLogo: string;
+  clickToUpload: string;
+  hint: string;
+  fileTooLarge: string;
+  invalidFileType: string;
+  removeLogo: string;
+}> = {
+  tr: {
+    scannerLogo: "Tarayıcı Logosu",
+    clickToUpload: "Logo yüklemek için tıkla",
+    hint: "Önerilen 600×300px · En fazla 2MB · PNG/SVG tercih edilir",
+    fileTooLarge: "Dosya çok büyük (maksimum 2MB).",
+    invalidFileType: "Sadece PNG, JPEG ya da SVG kabul edilir.",
+    removeLogo: "Özel logoyu kaldır",
+  },
+  en: {
+    scannerLogo: "Scanner Logo",
+    clickToUpload: "Click to upload a logo",
+    hint: "Recommended 600×300px · Max 2MB · PNG/SVG preferred",
+    fileTooLarge: "File is too large (max 2MB).",
+    invalidFileType: "Only PNG, JPEG, or SVG are accepted.",
+    removeLogo: "Remove custom logo",
+  },
+};
+
+function BrandingTab({
+  theme,
+  onChange,
+  locale,
+}: {
+  theme: ScannerTheme;
+  onChange: (u: Partial<ScannerTheme>) => void;
+  locale: "tr" | "en";
+}) {
+  const t = BRANDING_STRINGS[locale];
   const [error, setError] = useState<string | null>(null);
 
   function handleFile(file: File | undefined) {
     setError(null);
     if (!file) return;
     if (file.size > MAX_LOGO_BYTES) {
-      setError("Dosya çok büyük (maksimum 2MB).");
+      setError(t.fileTooLarge);
       return;
     }
     if (!["image/png", "image/svg+xml", "image/jpeg"].includes(file.type)) {
-      setError("Sadece PNG, JPEG ya da SVG kabul edilir.");
+      setError(t.invalidFileType);
       return;
     }
     const reader = new FileReader();
@@ -340,17 +494,17 @@ function BrandingTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: P
 
   return (
     <div>
-      <div className="text-sm font-medium text-zinc-300">Tarayıcı Logosu</div>
+      <div className="text-sm font-medium text-zinc-300">{t.scannerLogo}</div>
       <label className="mt-2 flex h-40 w-full max-w-md cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 transition-colors hover:border-violet-700">
         {theme.logoBase64 ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={theme.logoBase64} alt="Özel logo" className="max-h-28 max-w-[80%] object-contain" />
+          <img src={theme.logoBase64} alt="" className="max-h-28 max-w-[80%] object-contain" />
         ) : (
-          <span className="text-xs text-zinc-500">Logo yüklemek için tıkla</span>
+          <span className="text-xs text-zinc-500">{t.clickToUpload}</span>
         )}
         <input type="file" accept="image/png,image/jpeg,image/svg+xml" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
       </label>
-      <p className="mt-2 text-xs text-zinc-600">Önerilen 600×300px · En fazla 2MB · PNG/SVG tercih edilir</p>
+      <p className="mt-2 text-xs text-zinc-600">{t.hint}</p>
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
 
       {theme.logoBase64 && (
@@ -358,20 +512,32 @@ function BrandingTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: P
           onClick={() => onChange({ logoBase64: null })}
           className="mt-3 rounded-md border border-red-900 px-3 py-1.5 text-xs text-red-400 hover:border-red-800"
         >
-          Özel logoyu kaldır
+          {t.removeLogo}
         </button>
       )}
     </div>
   );
 }
 
-function OptionsTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Partial<ScannerTheme>) => void }) {
+function OptionsTab({
+  theme,
+  onChange,
+  locale,
+}: {
+  theme: ScannerTheme;
+  onChange: (u: Partial<ScannerTheme>) => void;
+  locale: "tr" | "en";
+}) {
+  const t =
+    locale === "en"
+      ? { showWatermark: "Show Watermark", desc: 'Show "NexusGuard" text in the bottom corner of the tool window.' }
+      : { showWatermark: "Filigran Göster", desc: 'Araç penceresinin alt köşesinde "NexusGuard" metnini göster.' };
   return (
     <div className="max-w-md rounded-lg border border-zinc-800 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-medium text-zinc-200">Filigran Göster</div>
-          <p className="mt-1 text-xs text-zinc-500">Araç penceresinin alt köşesinde &quot;NexusGuard&quot; metnini göster.</p>
+          <div className="text-sm font-medium text-zinc-200">{t.showWatermark}</div>
+          <p className="mt-1 text-xs text-zinc-500">{t.desc}</p>
         </div>
         <button
           onClick={() => onChange({ showWatermark: !theme.showWatermark })}
@@ -388,7 +554,75 @@ function OptionsTab({ theme, onChange }: { theme: ScannerTheme; onChange: (u: Pa
   );
 }
 
-function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: ScannerTheme) => void }) {
+const LIBRARY_STRINGS: Dict<{
+  apiUnreachable: string;
+  namePrompt: string;
+  nameDefault: string;
+  titlePrompt: string;
+  descPrompt: string;
+  uploadedAlert: string;
+  savedDesigns: string;
+  subtitle: string;
+  marketplace: string;
+  subtitleSuffix: string;
+  saving: string;
+  saveCurrent: string;
+  loading: string;
+  noDesignsYet: string;
+  apply: string;
+  publishToMarketplace: string;
+  delete: string;
+}> = {
+  tr: {
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    namePrompt: "Bu tasarıma bir isim ver:",
+    nameDefault: "Tasarımım",
+    titlePrompt: "Mağazada görünecek başlık:",
+    descPrompt: "Kısa bir açıklama (isteğe bağlı):",
+    uploadedAlert: "Tasarım Mağaza'ya yüklendi.",
+    savedDesigns: "Kayıtlı Tasarımlarım",
+    subtitle: "Şu anki tasarımı adlandırıp kaydet, sonra istediğin zaman geri yükle ya da",
+    marketplace: "Mağaza",
+    subtitleSuffix: "'ya yükle.",
+    saving: "Kaydediliyor...",
+    saveCurrent: "Şu anki tasarımı kaydet",
+    loading: "Yükleniyor...",
+    noDesignsYet: "Henüz kayıtlı bir tasarımın yok.",
+    apply: "Uygula",
+    publishToMarketplace: "Pazara Yükle",
+    delete: "Sil",
+  },
+  en: {
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    namePrompt: "Name this design:",
+    nameDefault: "My Design",
+    titlePrompt: "Title to show in the Marketplace:",
+    descPrompt: "A short description (optional):",
+    uploadedAlert: "Design uploaded to the Marketplace.",
+    savedDesigns: "My Saved Designs",
+    subtitle: "Name and save the current design, then restore it anytime, or upload it to the",
+    marketplace: "Marketplace",
+    subtitleSuffix: ".",
+    saving: "Saving...",
+    saveCurrent: "Save current design",
+    loading: "Loading...",
+    noDesignsYet: "You don't have any saved designs yet.",
+    apply: "Apply",
+    publishToMarketplace: "Publish to Marketplace",
+    delete: "Delete",
+  },
+};
+
+function LibraryTab({
+  theme,
+  onApply,
+  locale,
+}: {
+  theme: ScannerTheme;
+  onApply: (t: ScannerTheme) => void;
+  locale: "tr" | "en";
+}) {
+  const t = LIBRARY_STRINGS[locale];
   const [designs, setDesigns] = useState<SavedToolDesignResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -397,13 +631,14 @@ function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: Scan
   function load() {
     listSavedDesigns()
       .then(setDesigns)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(load, []);
 
   async function handleSave() {
-    const name = window.prompt("Bu tasarıma bir isim ver:", "Tasarımım");
+    const name = window.prompt(t.namePrompt, t.nameDefault);
     if (!name || !name.trim()) return;
     setSaving(true);
     setError(null);
@@ -411,7 +646,7 @@ function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: Scan
       const created = await saveDesign(name.trim(), theme);
       setDesigns((prev) => (prev ? [created, ...prev] : [created]));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setSaving(false);
     }
@@ -423,22 +658,22 @@ function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: Scan
       await deleteSavedDesign(id);
       setDesigns((prev) => prev?.filter((d) => d.id !== id) ?? null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     }
   }
 
   async function handlePublish(design: SavedToolDesignResponse) {
-    const title = window.prompt("Mağazada görünecek başlık:", design.name);
+    const title = window.prompt(t.titlePrompt, design.name);
     if (!title || !title.trim()) return;
-    const description = window.prompt("Kısa bir açıklama (isteğe bağlı):", "") ?? "";
+    const description = window.prompt(t.descPrompt, "") ?? "";
 
     setPublishingId(design.id);
     setError(null);
     try {
       await publishDesign(design.id, title.trim(), description.trim() || null);
-      window.alert("Tasarım Mağaza'ya yüklendi.");
+      window.alert(t.uploadedAlert);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setPublishingId(null);
     }
@@ -448,13 +683,13 @@ function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: Scan
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-medium text-zinc-300">Kayıtlı Tasarımlarım</div>
+          <div className="text-sm font-medium text-zinc-300">{t.savedDesigns}</div>
           <p className="mt-1 text-xs text-zinc-500">
-            Şu anki tasarımı adlandırıp kaydet, sonra istediğin zaman geri yükle ya da{" "}
+            {t.subtitle}{" "}
             <Link href="/marketplace" className="text-violet-400 hover:text-violet-300">
-              Mağaza
+              {t.marketplace}
             </Link>
-            &apos;ya yükle.
+            {t.subtitleSuffix}
           </p>
         </div>
         <button
@@ -462,17 +697,17 @@ function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: Scan
           disabled={saving}
           className="shrink-0 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
         >
-          {saving ? "Kaydediliyor..." : "Şu anki tasarımı kaydet"}
+          {saving ? t.saving : t.saveCurrent}
         </button>
       </div>
 
       {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
 
-      {designs === null && <p className="mt-6 text-sm text-zinc-500">Yükleniyor...</p>}
+      {designs === null && <p className="mt-6 text-sm text-zinc-500">{t.loading}</p>}
 
       {designs !== null && designs.length === 0 && (
         <p className="mt-6 rounded-lg border border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
-          Henüz kayıtlı bir tasarımın yok.
+          {t.noDesignsYet}
         </p>
       )}
 
@@ -487,7 +722,9 @@ function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: Scan
                 />
                 <div>
                   <div className="text-sm font-medium text-zinc-200">{d.name}</div>
-                  <div className="text-[11px] text-zinc-600">{new Date(d.createdAt).toLocaleDateString("tr-TR")}</div>
+                  <div className="text-[11px] text-zinc-600">
+                    {new Date(d.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR")}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -495,20 +732,20 @@ function LibraryTab({ theme, onApply }: { theme: ScannerTheme; onApply: (t: Scan
                   onClick={() => onApply(d.theme)}
                   className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300"
                 >
-                  Uygula
+                  {t.apply}
                 </button>
                 <button
                   onClick={() => handlePublish(d)}
                   disabled={publishingId === d.id}
                   className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300 disabled:opacity-50"
                 >
-                  {publishingId === d.id ? "..." : "Pazara Yükle"}
+                  {publishingId === d.id ? "..." : t.publishToMarketplace}
                 </button>
                 <button
                   onClick={() => handleDelete(d.id)}
                   className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
                 >
-                  Sil
+                  {t.delete}
                 </button>
               </div>
             </div>

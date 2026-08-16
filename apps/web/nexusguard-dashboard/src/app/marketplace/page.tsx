@@ -14,12 +14,122 @@ import {
   type MarketplaceListingSummaryResponse,
 } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
+import { useLocale, type Locale } from "@/lib/i18n/LocaleContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
 
 type Tab = "explore" | "mine";
+
+const STRINGS: Dict<{
+  title: string;
+  subtitle: string;
+  explore: string;
+  mySubmissions: string;
+  searchPlaceholder: string;
+  search: string;
+  apiUnreachable: string;
+  loading: string;
+  noListingsYet: string;
+  noSubmissionsYet: string;
+  noSubmissionsHint: string;
+  installs: string;
+  by: string;
+  backToMarketplace: string;
+  reviews: string;
+  installsCount: string;
+  install: string;
+  freePlanNotEnough: string;
+  upgradeToPro: string;
+  confirmInstallPrefix: string;
+  confirmInstallMiddle: string;
+  confirmInstallSuffix: string;
+  installing: string;
+  yesInstall: string;
+  cancel: string;
+  leaveReview: string;
+  shareExperience: string;
+  submitting: string;
+  submit: string;
+  pickStarFirst: string;
+  noReviewsYet: string;
+  enterAPin: string;
+  reviewsHeading: string;
+}> = {
+  tr: {
+    title: "Mağaza",
+    subtitle: "Topluluğun oluşturduğu Tool Designer tasarımlarını keşfet ve yükle.",
+    explore: "Keşfet",
+    mySubmissions: "Gönderimlerim",
+    searchPlaceholder: "Mağazada ara...",
+    search: "Ara",
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    loading: "Yükleniyor...",
+    noListingsYet: "Henüz paylaşılan bir tasarım yok.",
+    noSubmissionsYet: "Henüz bir tasarım paylaşmadın.",
+    noSubmissionsHint: "'daki Kütüphanem sekmesinden bir tasarımı Mağaza'ya yükleyebilirsin.",
+    installs: "yükleme",
+    by: "tarafından",
+    backToMarketplace: "← Mağaza'ya dön",
+    reviews: "değerlendirme",
+    installsCount: "yükleme",
+    install: "Yükle",
+    freePlanNotEnough: "Mağazadan tasarım yüklemek için Free plan yeterli değil.",
+    upgradeToPro: "PRO'ya geç →",
+    confirmInstallPrefix: "Bu,",
+    confirmInstallMiddle: "sunucundaki Tool Designer tasarımını",
+    confirmInstallSuffix: "ile değiştirecek. Mevcut özelleştirmen kaybolur — emin misin?",
+    installing: "Yükleniyor...",
+    yesInstall: "Evet, yükle",
+    cancel: "Vazgeç",
+    leaveReview: "Bir değerlendirme bırak",
+    shareExperience: "Deneyimini paylaş (isteğe bağlı)...",
+    submitting: "Gönderiliyor...",
+    submit: "Gönder",
+    pickStarFirst: "Önce bir yıldız seç.",
+    noReviewsYet: "Henüz değerlendirme yok — ilk sen ol.",
+    enterAPin: "Enter a PIN",
+    reviewsHeading: "Değerlendirmeler",
+  },
+  en: {
+    title: "Marketplace",
+    subtitle: "Discover and install Tool Designer themes created by the community.",
+    explore: "Explore",
+    mySubmissions: "My Submissions",
+    searchPlaceholder: "Search the marketplace...",
+    search: "Search",
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    loading: "Loading...",
+    noListingsYet: "No designs have been shared yet.",
+    noSubmissionsYet: "You haven't shared a design yet.",
+    noSubmissionsHint: "'s My Library tab, you can upload a design to the Marketplace.",
+    installs: "installs",
+    by: "by",
+    backToMarketplace: "← Back to Marketplace",
+    reviews: "reviews",
+    installsCount: "installs",
+    install: "Install",
+    freePlanNotEnough: "The Free plan isn't enough to install a design from the Marketplace.",
+    upgradeToPro: "Upgrade to PRO →",
+    confirmInstallPrefix: "This will replace the Tool Designer theme on",
+    confirmInstallMiddle: "with",
+    confirmInstallSuffix: "- your current customization will be lost. Are you sure?",
+    installing: "Installing...",
+    yesInstall: "Yes, install",
+    cancel: "Cancel",
+    leaveReview: "Leave a review",
+    shareExperience: "Share your experience (optional)...",
+    submitting: "Submitting...",
+    submit: "Submit",
+    pickStarFirst: "Pick a star rating first.",
+    noReviewsYet: "No reviews yet — be the first.",
+    enterAPin: "Enter a PIN",
+    reviewsHeading: "Reviews",
+  },
+};
 
 export default function MarketplacePage() {
   const router = useRouter();
   const { session, server, loading } = useServerContext();
+  const t = useT(STRINGS);
   const [tab, setTab] = useState<Tab>("explore");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -35,6 +145,7 @@ export default function MarketplacePage() {
       <ListingDetail
         id={selectedId}
         server={server}
+        t={t}
         onBack={() => setSelectedId(null)}
       />
     );
@@ -43,19 +154,17 @@ export default function MarketplacePage() {
   return (
     <div>
       <h1 className="flex items-center gap-2 text-xl font-semibold text-white">
-        <span className="text-violet-400">🛍</span> Mağaza
+        <span className="text-violet-400">🛍</span> {t.title}
       </h1>
-      <p className="mt-1 text-sm text-zinc-400">
-        Topluluğun oluşturduğu Tool Designer tasarımlarını keşfet ve yükle.
-      </p>
+      <p className="mt-1 text-sm text-zinc-400">{t.subtitle}</p>
 
       <div className="mt-6 flex gap-1 border-b border-zinc-800">
-        <TabButton active={tab === "explore"} onClick={() => setTab("explore")} label="Keşfet" />
-        <TabButton active={tab === "mine"} onClick={() => setTab("mine")} label="Gönderimlerim" />
+        <TabButton active={tab === "explore"} onClick={() => setTab("explore")} label={t.explore} />
+        <TabButton active={tab === "mine"} onClick={() => setTab("mine")} label={t.mySubmissions} />
       </div>
 
-      {tab === "explore" && <ExploreTab onSelect={setSelectedId} />}
-      {tab === "mine" && <MineTab onSelect={setSelectedId} />}
+      {tab === "explore" && <ExploreTab t={t} onSelect={setSelectedId} />}
+      {tab === "mine" && <MineTab t={t} onSelect={setSelectedId} />}
     </div>
   );
 }
@@ -73,7 +182,7 @@ function TabButton({ active, onClick, label }: { active: boolean; onClick: () =>
   );
 }
 
-function ExploreTab({ onSelect }: { onSelect: (id: string) => void }) {
+function ExploreTab({ t, onSelect }: { t: (typeof STRINGS)["tr"]; onSelect: (id: string) => void }) {
   const [query, setQuery] = useState("");
   const [listings, setListings] = useState<MarketplaceListingSummaryResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,9 +190,10 @@ function ExploreTab({ onSelect }: { onSelect: (id: string) => void }) {
   function load(q?: string) {
     listMarketplaceListings(q)
       .then(setListings)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => load(), []);
 
   function handleSearch(e: React.FormEvent) {
@@ -97,26 +207,26 @@ function ExploreTab({ onSelect }: { onSelect: (id: string) => void }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Mağazada ara..."
+          placeholder={t.searchPlaceholder}
           className="w-full max-w-sm rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
         />
         <button type="submit" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600">
-          Ara
+          {t.search}
         </button>
       </form>
 
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-      {listings === null && !error && <p className="mt-6 text-sm text-zinc-500">Yükleniyor...</p>}
+      {listings === null && !error && <p className="mt-6 text-sm text-zinc-500">{t.loading}</p>}
       {listings !== null && listings.length === 0 && (
         <p className="mt-6 rounded-lg border border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
-          Henüz paylaşılan bir tasarım yok.
+          {t.noListingsYet}
         </p>
       )}
 
       {listings !== null && listings.length > 0 && (
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((l) => (
-            <ListingCard key={l.id} listing={l} onClick={() => onSelect(l.id)} />
+            <ListingCard key={l.id} listing={l} t={t} onClick={() => onSelect(l.id)} />
           ))}
         </div>
       )}
@@ -124,35 +234,35 @@ function ExploreTab({ onSelect }: { onSelect: (id: string) => void }) {
   );
 }
 
-function MineTab({ onSelect }: { onSelect: (id: string) => void }) {
+function MineTab({ t, onSelect }: { t: (typeof STRINGS)["tr"]; onSelect: (id: string) => void }) {
   const [listings, setListings] = useState<MarketplaceListingSummaryResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     listMyListings()
       .then(setListings)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, []);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+  }, [t.apiUnreachable]);
 
   return (
     <div className="mt-6">
       {error && <p className="text-sm text-red-400">{error}</p>}
-      {listings === null && !error && <p className="text-sm text-zinc-500">Yükleniyor...</p>}
+      {listings === null && !error && <p className="text-sm text-zinc-500">{t.loading}</p>}
       {listings !== null && listings.length === 0 && (
         <div className="rounded-lg border border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
-          <p>Henüz bir tasarım paylaşmadın.</p>
+          <p>{t.noSubmissionsYet}</p>
           <p className="mt-2 text-xs text-zinc-600">
             <Link href="/tool-designer" className="text-violet-400 hover:text-violet-300">
               Tool Designer
             </Link>
-            &apos;daki Kütüphanem sekmesinden bir tasarımı Mağaza&apos;ya yükleyebilirsin.
+            {t.noSubmissionsHint}
           </p>
         </div>
       )}
       {listings !== null && listings.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((l) => (
-            <ListingCard key={l.id} listing={l} onClick={() => onSelect(l.id)} />
+            <ListingCard key={l.id} listing={l} t={t} onClick={() => onSelect(l.id)} />
           ))}
         </div>
       )}
@@ -160,7 +270,15 @@ function MineTab({ onSelect }: { onSelect: (id: string) => void }) {
   );
 }
 
-function ListingCard({ listing, onClick }: { listing: MarketplaceListingSummaryResponse; onClick: () => void }) {
+function ListingCard({
+  listing,
+  t,
+  onClick,
+}: {
+  listing: MarketplaceListingSummaryResponse;
+  t: (typeof STRINGS)["tr"];
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
@@ -184,9 +302,13 @@ function ListingCard({ listing, onClick }: { listing: MarketplaceListingSummaryR
         {listing.description && <div className="mt-0.5 truncate text-xs text-zinc-500">{listing.description}</div>}
         <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
           <StarRating value={listing.averageRating} size="sm" />
-          <span>{listing.installCount} yükleme</span>
+          <span>
+            {listing.installCount} {t.installs}
+          </span>
         </div>
-        <div className="mt-1 text-[11px] text-zinc-600">{listing.authorUsername} tarafından</div>
+        <div className="mt-1 text-[11px] text-zinc-600">
+          {listing.authorUsername} {t.by}
+        </div>
       </div>
     </button>
   );
@@ -195,13 +317,16 @@ function ListingCard({ listing, onClick }: { listing: MarketplaceListingSummaryR
 function ListingDetail({
   id,
   server,
+  t,
   onBack,
 }: {
   id: string;
   server: { id: string; name: string; plan: string } | null;
+  t: (typeof STRINGS)["tr"];
   onBack: () => void;
 }) {
   const router = useRouter();
+  const { locale } = useLocale();
   const [detail, setDetail] = useState<MarketplaceListingDetailResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingInstall, setConfirmingInstall] = useState(false);
@@ -212,9 +337,10 @@ function ListingDetail({
   function load() {
     getMarketplaceListing(id)
       .then(setDetail)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(load, [id]);
 
   function handleInstallClick() {
@@ -238,7 +364,7 @@ function ListingDetail({
         setConfirmingInstall(false);
         setUpgradePrompt(true);
       } else {
-        setInstallError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+        setInstallError(err instanceof ApiError ? err.message : t.apiUnreachable);
       }
     } finally {
       setInstalling(false);
@@ -248,11 +374,11 @@ function ListingDetail({
   return (
     <div>
       <button onClick={onBack} className="text-sm text-zinc-400 hover:text-zinc-200">
-        ← Mağaza&apos;ya dön
+        {t.backToMarketplace}
       </button>
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-      {!detail && !error && <p className="mt-6 text-sm text-zinc-500">Yükleniyor...</p>}
+      {!detail && !error && <p className="mt-6 text-sm text-zinc-500">{t.loading}</p>}
 
       {detail && (
         <>
@@ -262,16 +388,18 @@ function ListingDetail({
               <div className="mt-1 flex items-center gap-2 text-sm text-zinc-400">
                 <StarRating value={detail.summary.averageRating} />
                 <span className="text-zinc-600">
-                  ({detail.summary.reviewCount} değerlendirme · {detail.summary.installCount} yükleme)
+                  ({detail.summary.reviewCount} {t.reviews} · {detail.summary.installCount} {t.installsCount})
                 </span>
               </div>
-              <p className="mt-1 text-xs text-zinc-500">{detail.summary.authorUsername} tarafından</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                {detail.summary.authorUsername} {t.by}
+              </p>
             </div>
             <button
               onClick={handleInstallClick}
               className="shrink-0 rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
             >
-              Yükle
+              {t.install}
             </button>
           </div>
 
@@ -279,9 +407,9 @@ function ListingDetail({
 
           {upgradePrompt && (
             <div className="mt-4 rounded-md border border-amber-800/60 bg-amber-950/20 px-3 py-2.5 text-sm text-amber-200">
-              <p>Mağazadan tasarım yüklemek için Free plan yeterli değil.</p>
+              <p>{t.freePlanNotEnough}</p>
               <Link href="/pricing" className="mt-2 inline-block font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200">
-                PRO&apos;ya geç →
+                {t.upgradeToPro}
               </Link>
             </div>
           )}
@@ -289,8 +417,8 @@ function ListingDetail({
           {confirmingInstall && (
             <div className="mt-4 rounded-lg border border-violet-800/60 bg-violet-950/20 p-4">
               <p className="text-sm text-zinc-200">
-                Bu, <strong>{server?.name}</strong> sunucundaki Tool Designer tasarımını{" "}
-                <strong>{detail.summary.title}</strong> ile değiştirecek. Mevcut özelleştirmen kaybolur — emin misin?
+                {t.confirmInstallPrefix} <strong>{server?.name}</strong> {t.confirmInstallMiddle}{" "}
+                <strong>{detail.summary.title}</strong> {t.confirmInstallSuffix}
               </p>
               {installError && <p className="mt-2 text-xs text-red-400">{installError}</p>}
               <div className="mt-3 flex gap-2">
@@ -299,13 +427,13 @@ function ListingDetail({
                   disabled={installing}
                   className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
                 >
-                  {installing ? "Yükleniyor..." : "Evet, yükle"}
+                  {installing ? t.installing : t.yesInstall}
                 </button>
                 <button
                   onClick={() => setConfirmingInstall(false)}
                   className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-600"
                 >
-                  Vazgeç
+                  {t.cancel}
                 </button>
               </div>
             </div>
@@ -326,7 +454,7 @@ function ListingDetail({
               )}
               <div>
                 <div className="text-lg font-semibold" style={{ color: detail.theme.primaryTextColor }}>
-                  {detail.theme.pinTitle || "Enter a PIN"}
+                  {detail.theme.pinTitle || t.enterAPin}
                 </div>
                 <div className="text-xs" style={{ color: detail.theme.secondaryTextColor }}>
                   {detail.theme.pinSubtitle}
@@ -335,7 +463,7 @@ function ListingDetail({
             </div>
           </div>
 
-          <ReviewSection listingId={id} reviews={detail.reviews} onSubmitted={load} />
+          <ReviewSection listingId={id} reviews={detail.reviews} t={t} locale={locale} onSubmitted={load} />
         </>
       )}
     </div>
@@ -345,10 +473,14 @@ function ListingDetail({
 function ReviewSection({
   listingId,
   reviews,
+  t,
+  locale,
   onSubmitted,
 }: {
   listingId: string;
   reviews: MarketplaceListingDetailResponse["reviews"];
+  t: (typeof STRINGS)["tr"];
+  locale: Locale;
   onSubmitted: () => void;
 }) {
   const [rating, setRating] = useState(0);
@@ -358,7 +490,7 @@ function ReviewSection({
 
   async function handleSubmit() {
     if (rating < 1) {
-      setError("Önce bir yıldız seç.");
+      setError(t.pickStarFirst);
       return;
     }
     setSubmitting(true);
@@ -368,7 +500,7 @@ function ReviewSection({
       setComment("");
       onSubmitted();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setSubmitting(false);
     }
@@ -377,14 +509,14 @@ function ReviewSection({
   return (
     <div className="mt-8">
       <div className="rounded-lg border border-zinc-800 p-4">
-        <div className="text-sm font-medium text-zinc-200">Bir değerlendirme bırak</div>
+        <div className="text-sm font-medium text-zinc-200">{t.leaveReview}</div>
         <div className="mt-2">
           <StarRating value={rating} onChange={setRating} />
         </div>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Deneyimini paylaş (isteğe bağlı)..."
+          placeholder={t.shareExperience}
           rows={3}
           className="mt-3 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
         />
@@ -395,16 +527,18 @@ function ReviewSection({
             disabled={submitting}
             className="ml-auto rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
           >
-            {submitting ? "Gönderiliyor..." : "Gönder"}
+            {submitting ? t.submitting : t.submit}
           </button>
         </div>
       </div>
 
-      <h2 className="mt-6 text-sm font-semibold text-zinc-300">Değerlendirmeler ({reviews.length})</h2>
+      <h2 className="mt-6 text-sm font-semibold text-zinc-300">
+        {t.reviewsHeading} ({reviews.length})
+      </h2>
 
       {reviews.length === 0 ? (
         <p className="mt-3 rounded-lg border border-zinc-800 px-4 py-6 text-center text-sm text-zinc-500">
-          Henüz değerlendirme yok — ilk sen ol.
+          {t.noReviewsYet}
         </p>
       ) : (
         <div className="mt-3 space-y-3">
@@ -415,7 +549,9 @@ function ReviewSection({
                 <StarRating value={r.rating} size="sm" />
               </div>
               {r.comment && <p className="mt-1.5 text-sm text-zinc-400">{r.comment}</p>}
-              <p className="mt-1.5 text-[11px] text-zinc-600">{new Date(r.createdAt).toLocaleDateString("tr-TR")}</p>
+              <p className="mt-1.5 text-[11px] text-zinc-600">
+                {new Date(r.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR")}
+              </p>
             </div>
           ))}
         </div>
