@@ -4,6 +4,56 @@ import { useEffect, useState } from "react";
 import { ApiError, getLeaderboard, type LeaderboardEntryResponse } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
 import { useRouter } from "next/navigation";
+import { useT, type Dict } from "@/lib/i18n/useT";
+
+const STRINGS: Dict<{
+  titlePrefix: string;
+  titleSuffix: string;
+  subtitle: string;
+  weekly: string;
+  monthly: string;
+  apiUnreachable: string;
+  loading: string;
+  emptyWeekly: string;
+  emptyMonthly: string;
+  emptyHint: string;
+  scans: string;
+  detections: string;
+  rank: string;
+}> = {
+  tr: {
+    titlePrefix: "Tarama",
+    titleSuffix: "Sıralaması",
+    subtitle: "NexusGuard genelinde en çok tarama yapan kim?",
+    weekly: "Haftalık",
+    monthly: "Aylık",
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    loading: "Yükleniyor...",
+    emptyWeekly: "Son 7 günde kimliği bilinen bir tarama yapılmamış.",
+    emptyMonthly: "Son 30 günde kimliği bilinen bir tarama yapılmamış.",
+    emptyHint:
+      "Bir taramanın burada sayılması için, taramayı oluşturan kişinin Discord ya da Google ile giriş yapmış olması gerekiyor.",
+    scans: "Tarama",
+    detections: "Tespit",
+    rank: "SIRA",
+  },
+  en: {
+    titlePrefix: "Scan",
+    titleSuffix: "Leaderboard",
+    subtitle: "Who's run the most scans across all of NexusGuard?",
+    weekly: "Weekly",
+    monthly: "Monthly",
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    loading: "Loading...",
+    emptyWeekly: "No identified scans have been run in the last 7 days.",
+    emptyMonthly: "No identified scans have been run in the last 30 days.",
+    emptyHint:
+      "For a scan to count here, the person who created it must have signed in with Discord or Google.",
+    scans: "Scans",
+    detections: "Detections",
+    rank: "RANK",
+  },
+};
 
 const AVATAR_COLORS = ["#ef4444", "#f59e0b", "#22c55e", "#06b6d4", "#8b5cf6", "#ec4899", "#84cc16"];
 
@@ -16,6 +66,7 @@ function colorFor(username: string) {
 export default function LeaderboardPage() {
   const router = useRouter();
   const { session, loading } = useServerContext();
+  const t = useT(STRINGS);
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [entries, setEntries] = useState<LeaderboardEntryResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +80,8 @@ export default function LeaderboardPage() {
     setEntries(null);
     getLeaderboard(period)
       .then(setEntries)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
-  }, [session, loading, router, period]);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+  }, [session, loading, router, period, t.apiUnreachable]);
 
   if (loading || !session) return null;
 
@@ -41,11 +92,9 @@ export default function LeaderboardPage() {
     <div className="mx-auto max-w-3xl text-center">
       <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-white">
         <span className="text-violet-400">◆</span>
-        Tarama <span className="text-violet-400">Sıralaması</span>
+        {t.titlePrefix} <span className="text-violet-400">{t.titleSuffix}</span>
       </h1>
-      <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-        NexusGuard genelinde en çok tarama yapan kim?
-      </p>
+      <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">{t.subtitle}</p>
 
       <div className="mt-4 inline-flex items-center gap-1 rounded-full border border-zinc-800 p-1 text-xs">
         {(["weekly", "monthly"] as const).map((p) => (
@@ -56,7 +105,7 @@ export default function LeaderboardPage() {
               period === p ? "bg-violet-600 text-white" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            {p === "weekly" ? "Haftalık" : "Aylık"}
+            {p === "weekly" ? t.weekly : t.monthly}
           </button>
         ))}
       </div>
@@ -65,27 +114,21 @@ export default function LeaderboardPage() {
         <p className="mt-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">{error}</p>
       )}
 
-      {entries === null && !error && <p className="mt-10 text-sm text-zinc-500">Yükleniyor...</p>}
+      {entries === null && !error && <p className="mt-10 text-sm text-zinc-500">{t.loading}</p>}
 
       {entries !== null && entries.length === 0 && (
         <div className="mt-10 rounded-lg border border-zinc-800 px-6 py-10 text-sm text-zinc-500">
-          <p>
-            {period === "weekly" ? "Son 7 günde" : "Son 30 günde"} kimliği bilinen bir tarama
-            yapılmamış.
-          </p>
-          <p className="mt-2 text-xs text-zinc-600">
-            Bir taramanın burada sayılması için, taramayı oluşturan kişinin Discord ya da Google
-            ile giriş yapmış olması gerekiyor.
-          </p>
+          <p>{period === "weekly" ? t.emptyWeekly : t.emptyMonthly}</p>
+          <p className="mt-2 text-xs text-zinc-600">{t.emptyHint}</p>
         </div>
       )}
 
       {entries !== null && entries.length > 0 && (
         <>
           <div className="mt-10 grid grid-cols-3 items-end gap-3 text-left">
-            <PodiumCard entry={second} rank={2} />
-            <PodiumCard entry={first} rank={1} tall />
-            <PodiumCard entry={third} rank={3} />
+            <PodiumCard entry={second} rank={2} t={t} />
+            <PodiumCard entry={first} rank={1} tall t={t} />
+            <PodiumCard entry={third} rank={3} t={t} />
           </div>
 
           {rest.length > 0 && (
@@ -104,8 +147,8 @@ export default function LeaderboardPage() {
                     <ProviderBadge provider={e.provider} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <StatChip label="Tarama" value={e.scanCount} />
-                    <StatChip label="Tespit" value={e.detectionCount} />
+                    <StatChip label={t.scans} value={e.scanCount} />
+                    <StatChip label={t.detections} value={e.detectionCount} />
                   </div>
                 </div>
               ))}
@@ -158,7 +201,17 @@ function ProviderBadge({ provider }: { provider: LeaderboardEntryResponse["provi
   );
 }
 
-function PodiumCard({ entry, rank, tall }: { entry?: LeaderboardEntryResponse; rank: number; tall?: boolean }) {
+function PodiumCard({
+  entry,
+  rank,
+  tall,
+  t,
+}: {
+  entry?: LeaderboardEntryResponse;
+  rank: number;
+  tall?: boolean;
+  t: { rank: string; scans: string; detections: string };
+}) {
   if (!entry) return <div />;
 
   return (
@@ -172,7 +225,7 @@ function PodiumCard({ entry, rank, tall }: { entry?: LeaderboardEntryResponse; r
           rank === 1 ? "bg-violet-600" : "bg-zinc-700"
         }`}
       >
-        {rank}. SIRA
+        {rank}. {t.rank}
       </span>
       <div className="mx-auto mt-3 flex justify-center">
         <Avatar entry={entry} size={56} />
@@ -182,8 +235,8 @@ function PodiumCard({ entry, rank, tall }: { entry?: LeaderboardEntryResponse; r
         <ProviderBadge provider={entry.provider} />
       </div>
       <div className="mx-auto mt-3 space-y-1.5">
-        <StatChip label="Tarama" value={entry.scanCount} full />
-        <StatChip label="Tespit" value={entry.detectionCount} full />
+        <StatChip label={t.scans} value={entry.scanCount} full />
+        <StatChip label={t.detections} value={entry.detectionCount} full />
       </div>
     </div>
   );
