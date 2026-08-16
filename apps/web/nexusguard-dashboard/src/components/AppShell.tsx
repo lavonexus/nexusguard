@@ -7,27 +7,64 @@ import { useEffect, useState } from "react";
 import { DISCORD_PURCHASE_URL } from "@/lib/api";
 import { loadSession, type ServerSession } from "@/lib/session";
 import { ServerProvider } from "@/lib/serverContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
 import Logo from "@/components/Logo";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Star positions are randomized client-side (Math.random(), see StarfieldBackground.tsx) -
 // purely decorative, so skipping SSR avoids a server/client hydration mismatch instead of
 // trying to keep two random draws in sync.
 const StarfieldBackground = dynamic(() => import("@/components/StarfieldBackground"), { ssr: false });
 
-const MARKETING_LINKS = [
-  { href: "/#features", label: "Özellikler" },
-  { href: "/pricing", label: "Fiyatlar" },
-  { href: "/faq", label: "SSS" },
-  { href: "/terms", label: "Koşullar" },
-  { href: "/privacy", label: "Gizlilik" },
-  { href: "/refund", label: "İade" },
-  { href: "/partner", label: "Partner" },
-];
+const MARKETING_LINKS: Dict<{ href: string; label: string }[]> = {
+  tr: [
+    { href: "/#features", label: "Özellikler" },
+    { href: "/pricing", label: "Fiyatlar" },
+    { href: "/faq", label: "SSS" },
+    { href: "/terms", label: "Koşullar" },
+    { href: "/privacy", label: "Gizlilik" },
+    { href: "/refund", label: "İade" },
+    { href: "/partner", label: "Partner" },
+  ],
+  en: [
+    { href: "/#features", label: "Features" },
+    { href: "/pricing", label: "Pricing" },
+    { href: "/faq", label: "FAQ" },
+    { href: "/terms", label: "Terms" },
+    { href: "/privacy", label: "Privacy" },
+    { href: "/refund", label: "Refunds" },
+    { href: "/partner", label: "Partner" },
+  ],
+};
+
+const STRINGS: Dict<{
+  discordTooltip: string;
+  panel: string;
+  freeStart: string;
+  footerTagline: string;
+}> = {
+  tr: {
+    discordTooltip: "Discord",
+    panel: "Panel",
+    freeStart: "Ücretsiz başla",
+    footerTagline:
+      "FiveM için sunucu taraflı hile tespiti. Scanner'ın raporladığı hiçbir şeye, sunucu doğrulamadan güvenilmez.",
+  },
+  en: {
+    discordTooltip: "Discord",
+    panel: "Dashboard",
+    freeStart: "Start for free",
+    footerTagline:
+      "Server-side cheat detection for FiveM. Nothing the Scanner reports is trusted until the server verifies it.",
+  },
+};
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [session, setSession] = useState<ServerSession | null>(null);
+  const marketingLinks = useT(MARKETING_LINKS);
+  const t = useT(STRINGS);
 
   useEffect(() => {
     setSession(loadSession());
@@ -48,7 +85,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <nav className="hidden items-center gap-5 lg:flex">
-              {MARKETING_LINKS.map((link) => (
+              {marketingLinks.map((link) => (
                 <Link key={link.href} href={link.href} className="text-sm text-zinc-400 transition-colors hover:text-zinc-200">
                   {link.label}
                 </Link>
@@ -60,27 +97,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 href={DISCORD_PURCHASE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Discord"
+                title={t.discordTooltip}
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-800 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
               >
                 <DiscordIcon className="h-4 w-4" />
               </a>
 
-              <button
-                type="button"
-                title="Dil (yalnızca Türkçe mevcut)"
-                className="hidden items-center gap-1 rounded-full border border-zinc-800 px-2.5 py-1.5 text-xs font-medium text-zinc-400 sm:flex"
-              >
-                <GlobeIcon className="h-3.5 w-3.5" />
-                TR
-                <ChevronDownIcon className="h-3 w-3" />
-              </button>
+              <LanguageSwitcher className="hidden sm:block" />
 
               <Link
                 href={session ? "/overview" : "/setup"}
                 className="rounded-full bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-violet-500"
               >
-                Panel
+                {t.panel}
               </Link>
             </div>
           </div>
@@ -95,15 +124,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               NexusGuard
             </span>
             <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-              {MARKETING_LINKS.slice(2).map((link) => (
+              {marketingLinks.slice(2).map((link) => (
                 <Link key={link.href} href={link.href} className="transition-colors hover:text-zinc-300">
                   {link.label}
                 </Link>
               ))}
             </nav>
-            <span className="text-center sm:text-right">
-              FiveM için sunucu taraflı hile tespiti. Scanner&apos;ın raporladığı hiçbir şeye, sunucu doğrulamadan güvenilmez.
-            </span>
+            <span className="text-center sm:text-right">{t.footerTagline}</span>
           </div>
         </footer>
       </div>
@@ -138,7 +165,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               NexusGuard
             </Link>
             <Link href="/setup" className="rounded-md bg-violet-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-violet-500">
-              Ücretsiz başla
+              {t.freeStart}
             </Link>
           </div>
         </header>
@@ -162,23 +189,6 @@ function DiscordIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
       <path d="M20.32 5.37a18.5 18.5 0 0 0-4.6-1.43.07.07 0 0 0-.08.04c-.2.36-.42.82-.57 1.19a17.1 17.1 0 0 0-5.14 0 12 12 0 0 0-.58-1.19.07.07 0 0 0-.08-.04c-1.6.28-3.14.76-4.6 1.43a.07.07 0 0 0-.03.03C1.6 9.6.87 13.7 1.23 17.76a.08.08 0 0 0 .03.05 18.6 18.6 0 0 0 5.6 2.83.07.07 0 0 0 .08-.03c.43-.59.82-1.22 1.14-1.87a.07.07 0 0 0-.04-.1 12.3 12.3 0 0 1-1.76-.84.07.07 0 0 1-.01-.12c.12-.09.24-.18.35-.27a.07.07 0 0 1 .07-.01c3.7 1.69 7.7 1.69 11.36 0a.07.07 0 0 1 .07.01c.11.09.23.18.35.27a.07.07 0 0 1-.01.12c-.56.33-1.15.6-1.76.84a.07.07 0 0 0-.04.1c.33.65.72 1.28 1.14 1.87a.07.07 0 0 0 .08.03 18.5 18.5 0 0 0 5.61-2.83.07.07 0 0 0 .03-.05c.44-4.7-.73-8.77-3.08-12.36a.06.06 0 0 0-.03-.03ZM8.68 15.3c-1.11 0-2.03-1.02-2.03-2.27s.9-2.27 2.03-2.27c1.14 0 2.05 1.03 2.03 2.27 0 1.25-.9 2.27-2.03 2.27Zm6.65 0c-1.11 0-2.03-1.02-2.03-2.27s.9-2.27 2.03-2.27c1.14 0 2.05 1.03 2.03 2.27 0 1.25-.89 2.27-2.03 2.27Z" />
-    </svg>
-  );
-}
-
-function GlobeIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }

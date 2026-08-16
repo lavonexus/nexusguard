@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/LocaleContext";
+
 export interface DecisionBucket {
   label: string;
   value: number;
@@ -10,6 +12,7 @@ export interface DecisionBucket {
 // so it draws from the fixed status palette rather than the categorical one. Each segment
 // gets a 2px surface gap; the legend carries the counts so color never has to be read alone.
 export default function DecisionDonut({ buckets }: { buckets: DecisionBucket[] }) {
+  const { locale } = useLocale();
   const total = buckets.reduce((sum, b) => sum + b.value, 0);
   const size = 160;
   const stroke = 22;
@@ -53,7 +56,7 @@ export default function DecisionDonut({ buckets }: { buckets: DecisionBucket[] }
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-xl font-semibold text-white">{total}</span>
-          <span className="text-[10px] text-zinc-500">toplam tarama</span>
+          <span className="text-[10px] text-zinc-500">{locale === "en" ? "total scans" : "toplam tarama"}</span>
         </div>
       </div>
 

@@ -1,9 +1,58 @@
+"use client";
+
 import Logo from "@/components/Logo";
+import { useT, type Dict } from "@/lib/i18n/useT";
+
+const STRINGS: Dict<{
+  overview: string;
+  scanHistory: string;
+  leaderboard: string;
+  enterprise: string;
+  greeting: string;
+  subtitle: string;
+  newScan: string;
+  totalScans: string;
+  detections: string;
+  cleanScans: string;
+  detectionRate: string;
+  activity: string;
+}> = {
+  tr: {
+    overview: "Genel Bakış",
+    scanHistory: "Tarama Geçmişi",
+    leaderboard: "Lider Tablosu",
+    enterprise: "Kurumsal",
+    greeting: "İyi akşamlar.",
+    subtitle: "İşte tespit özetin.",
+    newScan: "+ Yeni tarama",
+    totalScans: "Toplam tarama",
+    detections: "Tespitler",
+    cleanScans: "Temiz taramalar",
+    detectionRate: "Tespit oranı",
+    activity: "Tarama etkinliği",
+  },
+  en: {
+    overview: "Overview",
+    scanHistory: "Scan History",
+    leaderboard: "Leaderboard",
+    enterprise: "Enterprise",
+    greeting: "Good evening.",
+    subtitle: "Here's your detection summary.",
+    newScan: "+ New scan",
+    totalScans: "Total scans",
+    detections: "Detections",
+    cleanScans: "Clean scans",
+    detectionRate: "Detection rate",
+    activity: "Scan activity",
+  },
+};
 
 // A static, non-interactive recreation of the real /overview page for the marketing hero -
 // same sidebar labels, same tile names, same chart shapes as the actual dashboard, just with
 // illustrative numbers instead of a live fetch. Nothing here is a usage claim.
 export default function DashboardPreview() {
+  const t = useT(STRINGS);
+
   return (
     <div className="mx-auto max-w-4xl overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-violet-950/40">
       <div className="flex">
@@ -13,34 +62,32 @@ export default function DashboardPreview() {
             <span className="text-xs font-semibold text-white">NexusGuard</span>
           </div>
           <div className="mt-4 space-y-1 text-[11px]">
-            <div className="rounded bg-zinc-900 px-2 py-1.5 font-medium text-white">Genel Bakış</div>
-            <div className="px-2 py-1.5 text-zinc-500">Tarama Geçmişi</div>
-            <div className="px-2 py-1.5 text-zinc-500">Lider Tablosu</div>
-            <div className="px-2 py-1.5 text-zinc-500">Kurumsal</div>
+            <div className="rounded bg-zinc-900 px-2 py-1.5 font-medium text-white">{t.overview}</div>
+            <div className="px-2 py-1.5 text-zinc-500">{t.scanHistory}</div>
+            <div className="px-2 py-1.5 text-zinc-500">{t.leaderboard}</div>
+            <div className="px-2 py-1.5 text-zinc-500">{t.enterprise}</div>
           </div>
         </div>
 
         <div className="flex-1 p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-semibold text-white sm:text-sm">İyi akşamlar.</div>
-              <div className="text-[10px] text-zinc-500 sm:text-xs">İşte tespit özetin.</div>
+              <div className="text-xs font-semibold text-white sm:text-sm">{t.greeting}</div>
+              <div className="text-[10px] text-zinc-500 sm:text-xs">{t.subtitle}</div>
             </div>
-            <div className="rounded-md bg-violet-600 px-2.5 py-1 text-[10px] font-medium text-white sm:text-xs">
-              + Yeni tarama
-            </div>
+            <div className="rounded-md bg-violet-600 px-2.5 py-1 text-[10px] font-medium text-white sm:text-xs">{t.newScan}</div>
           </div>
 
           <div className="mt-3 grid grid-cols-4 gap-2">
-            <PreviewTile label="Toplam tarama" value="12" />
-            <PreviewTile label="Tespitler" value="3" tone="danger" />
-            <PreviewTile label="Temiz taramalar" value="7" tone="good" />
-            <PreviewTile label="Tespit oranı" value="25%" />
+            <PreviewTile label={t.totalScans} value="12" />
+            <PreviewTile label={t.detections} value="3" tone="danger" />
+            <PreviewTile label={t.cleanScans} value="7" tone="good" />
+            <PreviewTile label={t.detectionRate} value="25%" />
           </div>
 
           <div className="mt-3 grid grid-cols-[1.4fr_1fr] gap-2">
             <div className="rounded-lg border border-zinc-800 p-2.5">
-              <div className="text-[10px] font-medium text-zinc-400">Tarama etkinliği</div>
+              <div className="text-[10px] font-medium text-zinc-400">{t.activity}</div>
               <svg viewBox="0 0 200 60" className="mt-1.5 w-full" style={{ height: 50 }}>
                 <polyline
                   points="0,45 20,40 40,42 60,20 80,30 100,15 120,25 140,10 160,22 180,8 200,18"

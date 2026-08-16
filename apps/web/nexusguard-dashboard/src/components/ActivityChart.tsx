@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 export interface ActivityPoint {
   label: string;
@@ -16,6 +17,8 @@ const AXIS_TEXT = "#71717a";
 export default function ActivityChart({ points }: { points: ActivityPoint[] }) {
   const gradientId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const { locale } = useLocale();
+  const scansLabel = locale === "en" ? "scans" : "tarama";
 
   const width = 640;
   const height = 220;
@@ -113,7 +116,7 @@ export default function ActivityChart({ points }: { points: ActivityPoint[] }) {
           className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs shadow-lg"
           style={{ left: `${(xAt(hoverIndex) / width) * 100}%` }}
         >
-          <div className="font-medium text-zinc-200">{hovered.count} tarama</div>
+          <div className="font-medium text-zinc-200">{hovered.count} {scansLabel}</div>
           <div className="text-zinc-500">{hovered.label}</div>
         </div>
       )}

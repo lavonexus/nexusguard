@@ -3,16 +3,27 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useServerContext } from "@/lib/serverContext";
 import { clearSession } from "@/lib/session";
 import { logout as apiLogout } from "@/lib/api";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
 
-const MAIN_LINKS = [
-  { href: "/overview", label: "Genel Bakış" },
-  { href: "/scans", label: "Tarama Geçmişi" },
-  { href: "/leaderboard", label: "Lider Tablosu" },
-  { href: "/team", label: "Kurumsal" },
-];
+const MAIN_LINKS: Dict<{ href: string; label: string }[]> = {
+  tr: [
+    { href: "/overview", label: "Genel Bakış" },
+    { href: "/scans", label: "Tarama Geçmişi" },
+    { href: "/leaderboard", label: "Lider Tablosu" },
+    { href: "/team", label: "Kurumsal" },
+  ],
+  en: [
+    { href: "/overview", label: "Overview" },
+    { href: "/scans", label: "Scan History" },
+    { href: "/leaderboard", label: "Leaderboard" },
+    { href: "/team", label: "Enterprise" },
+  ],
+};
 
 const PLAN_LABEL: Record<string, string> = {
   Free: "Free",
@@ -21,10 +32,60 @@ const PLAN_LABEL: Record<string, string> = {
   Enterprise: "Enterprise",
 };
 
+const STRINGS: Dict<{
+  sectionMain: string;
+  sectionTools: string;
+  sectionOther: string;
+  sectionAdmin: string;
+  marketplace: string;
+  settings: string;
+  adminPanel: string;
+  adminBadge: string;
+  proBadge: string;
+  upgradeTitle: string;
+  upgradeBody: string;
+  switchServer: string;
+  logout: string;
+}> = {
+  tr: {
+    sectionMain: "Ana",
+    sectionTools: "Araçlar",
+    sectionOther: "Diğer",
+    sectionAdmin: "Yönetim",
+    marketplace: "Mağaza",
+    settings: "Ayarlar",
+    adminPanel: "Yönetici Paneli",
+    adminBadge: "ADMIN",
+    proBadge: "PRO",
+    upgradeTitle: "Enterprise'a yükselt",
+    upgradeBody: "Sunucuna birden fazla yönetici ekle, ekip halinde yönet.",
+    switchServer: "Sunucu değiştir",
+    logout: "Çıkış yap",
+  },
+  en: {
+    sectionMain: "Main",
+    sectionTools: "Tools",
+    sectionOther: "Other",
+    sectionAdmin: "Admin",
+    marketplace: "Marketplace",
+    settings: "Settings",
+    adminPanel: "Admin Panel",
+    adminBadge: "ADMIN",
+    proBadge: "PRO",
+    upgradeTitle: "Upgrade to Enterprise",
+    upgradeBody: "Add multiple admins to your server and manage it as a team.",
+    switchServer: "Switch server",
+    logout: "Log out",
+  },
+};
+
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { session, server, user } = useServerContext();
+  const { locale } = useLocale();
+  const mainLinks = useT(MAIN_LINKS);
+  const t = useT(STRINGS);
 
   async function handleLogout() {
     clearSession();
@@ -49,15 +110,18 @@ export default function DashboardSidebar() {
       <div className="pointer-events-none absolute -left-16 -top-24 -z-10 h-56 w-56 rounded-full bg-violet-700/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 left-1/2 -z-10 h-48 w-48 -translate-x-1/2 rounded-full bg-violet-900/10 blur-3xl" />
 
-      <div className="flex items-center gap-2 px-5 py-5">
-        <Logo className="h-6 w-6" />
-        <span className="font-semibold tracking-tight text-white">NexusGuard</span>
+      <div className="flex items-center justify-between gap-2 px-5 py-5">
+        <div className="flex items-center gap-2">
+          <Logo className="h-6 w-6" />
+          <span className="font-semibold tracking-tight text-white">NexusGuard</span>
+        </div>
+        <LanguageSwitcher />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3">
-        <div className="px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">Ana</div>
+        <div className="px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">{t.sectionMain}</div>
         <div className="mt-1 space-y-0.5">
-          {MAIN_LINKS.map((link) => {
+          {mainLinks.map((link) => {
             const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
               <Link
@@ -70,7 +134,7 @@ export default function DashboardSidebar() {
                 {link.label}
                 {link.href === "/team" && plan !== "Enterprise" && (
                   <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
-                    PRO
+                    {t.proBadge}
                   </span>
                 )}
               </Link>
@@ -78,7 +142,7 @@ export default function DashboardSidebar() {
           })}
         </div>
 
-        <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">Araçlar</div>
+        <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">{t.sectionTools}</div>
         <div className="mt-1 space-y-0.5">
           <Link
             href="/tool-designer"
@@ -96,11 +160,11 @@ export default function DashboardSidebar() {
                 : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
             }`}
           >
-            Mağaza
+            {t.marketplace}
           </Link>
         </div>
 
-        <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">Diğer</div>
+        <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">{t.sectionOther}</div>
         <div className="mt-1 space-y-0.5">
           <Link
             href="/settings"
@@ -108,13 +172,13 @@ export default function DashboardSidebar() {
               pathname === "/settings" ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
             }`}
           >
-            Ayarlar
+            {t.settings}
           </Link>
         </div>
 
         {user?.isSiteAdmin && (
           <>
-            <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">Yönetim</div>
+            <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">{t.sectionAdmin}</div>
             <div className="mt-1 space-y-0.5">
               <Link
                 href="/admin"
@@ -122,9 +186,9 @@ export default function DashboardSidebar() {
                   pathname === "/admin" ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                 }`}
               >
-                Yönetici Paneli
+                {t.adminPanel}
                 <span className="rounded border border-amber-800/60 px-1.5 py-0.5 text-[10px] font-medium text-amber-500">
-                  ADMIN
+                  {t.adminBadge}
                 </span>
               </Link>
             </div>
@@ -136,10 +200,8 @@ export default function DashboardSidebar() {
             href="/pricing"
             className="mt-6 block rounded-lg border border-violet-900/50 bg-gradient-to-b from-violet-950/40 to-transparent p-3 transition-colors hover:border-violet-700/60"
           >
-            <div className="text-xs font-semibold text-violet-300">Enterprise&apos;a yükselt</div>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-              Sunucuna birden fazla yönetici ekle, ekip halinde yönet.
-            </p>
+            <div className="text-xs font-semibold text-violet-300">{t.upgradeTitle}</div>
+            <p className="mt-1 text-xs leading-relaxed text-zinc-500">{t.upgradeBody}</p>
           </Link>
         )}
       </nav>
@@ -154,7 +216,13 @@ export default function DashboardSidebar() {
             <div className="text-xs text-zinc-500">
               {PLAN_LABEL[plan] ?? plan}
               {server?.planExpiresAt && (
-                <span className="text-zinc-600"> · {new Date(server.planExpiresAt).toLocaleDateString("tr-TR")}&apos;a kadar</span>
+                <span className="text-zinc-600">
+                  {" "}
+                  ·{" "}
+                  {locale === "en"
+                    ? `until ${new Date(server.planExpiresAt).toLocaleDateString("en-US")}`
+                    : `${new Date(server.planExpiresAt).toLocaleDateString("tr-TR")}'a kadar`}
+                </span>
               )}
             </div>
           </div>
@@ -164,13 +232,13 @@ export default function DashboardSidebar() {
             onClick={handleSwitchServer}
             className="whitespace-nowrap rounded-md border border-white/10 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-violet-800/50 hover:text-zinc-200"
           >
-            Sunucu değiştir
+            {t.switchServer}
           </button>
           <button
             onClick={handleLogout}
             className="whitespace-nowrap rounded-md border border-white/10 px-2 py-1 text-left text-xs text-zinc-400 transition-colors hover:border-violet-800/50 hover:text-zinc-200"
           >
-            Çıkış yap
+            {t.logout}
           </button>
         </div>
       </div>
