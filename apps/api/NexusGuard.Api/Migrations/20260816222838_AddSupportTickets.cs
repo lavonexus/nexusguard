@@ -16,8 +16,8 @@ namespace NexusGuard.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    DiscordChannelId = table.Column<long>(type: "bigint", nullable: false),
-                    DiscordGuildId = table.Column<long>(type: "bigint", nullable: false),
+                    DiscordChannelId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    DiscordGuildId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     TicketNumber = table.Column<int>(type: "integer", nullable: false),
                     Category = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     DiscordUserId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
@@ -37,7 +37,7 @@ namespace NexusGuard.Api.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     SupportTicketId = table.Column<Guid>(type: "uuid", nullable: false),
-                    DiscordMessageId = table.Column<long>(type: "bigint", nullable: false),
+                    DiscordMessageId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     AuthorDiscordId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     AuthorUsername = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     AuthorAvatarUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),

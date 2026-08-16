@@ -173,6 +173,8 @@ public class NexusGuardDbContext : DbContext
         {
             e.HasIndex(t => t.DiscordChannelId).IsUnique();
             e.HasIndex(t => t.DiscordUserId);
+            e.Property(t => t.DiscordChannelId).IsRequired().HasMaxLength(32);
+            e.Property(t => t.DiscordGuildId).IsRequired().HasMaxLength(32);
             e.Property(t => t.Category).IsRequired().HasMaxLength(64);
             e.Property(t => t.DiscordUserId).IsRequired().HasMaxLength(32);
             e.Property(t => t.ClosedByUsername).HasMaxLength(64);
@@ -182,6 +184,7 @@ public class NexusGuardDbContext : DbContext
         modelBuilder.Entity<SupportTicketMessage>(e =>
         {
             e.HasIndex(m => new { m.SupportTicketId, m.DiscordMessageId }).IsUnique();
+            e.Property(m => m.DiscordMessageId).IsRequired().HasMaxLength(32);
             e.Property(m => m.AuthorDiscordId).IsRequired().HasMaxLength(32);
             e.Property(m => m.AuthorUsername).IsRequired().HasMaxLength(64);
             e.Property(m => m.AuthorAvatarUrl).HasMaxLength(512);

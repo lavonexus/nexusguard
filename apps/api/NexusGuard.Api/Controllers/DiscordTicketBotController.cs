@@ -50,8 +50,8 @@ public class DiscordTicketBotController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{channelId:long}/messages")]
-    public async Task<IActionResult> AddMessage(long channelId, TicketMessageRequest request)
+    [HttpPost("{channelId}/messages")]
+    public async Task<IActionResult> AddMessage(string channelId, TicketMessageRequest request)
     {
         if (!IsAuthorizedBot()) return StatusCode(StatusCodes.Status403Forbidden);
 
@@ -79,8 +79,8 @@ public class DiscordTicketBotController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{channelId:long}/close")]
-    public async Task<IActionResult> CloseTicket(long channelId, CloseTicketRequest request)
+    [HttpPost("{channelId}/close")]
+    public async Task<IActionResult> CloseTicket(string channelId, CloseTicketRequest request)
     {
         if (!IsAuthorizedBot()) return StatusCode(StatusCodes.Status403Forbidden);
 
@@ -95,8 +95,8 @@ public class DiscordTicketBotController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{channelId:long}/reopen")]
-    public async Task<IActionResult> ReopenTicket(long channelId)
+    [HttpPost("{channelId}/reopen")]
+    public async Task<IActionResult> ReopenTicket(string channelId)
     {
         if (!IsAuthorizedBot()) return StatusCode(StatusCodes.Status403Forbidden);
 

@@ -8,8 +8,9 @@ public class SupportTicketMessage
     public SupportTicket? SupportTicket { get; set; }
 
     // Unique per ticket - lets the bot safely retry a push after a network blip without
-    // double-inserting the same Discord message.
-    public long DiscordMessageId { get; set; }
+    // double-inserting the same Discord message. String, not a numeric type - see
+    // SupportTicket.DiscordChannelId's own comment on why Discord snowflakes stay opaque strings.
+    public string DiscordMessageId { get; set; } = string.Empty;
 
     public string AuthorDiscordId { get; set; } = string.Empty;
     public string AuthorUsername { get; set; } = string.Empty;

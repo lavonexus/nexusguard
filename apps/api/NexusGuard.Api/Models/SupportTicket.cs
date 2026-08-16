@@ -9,9 +9,12 @@ public class SupportTicket
 {
     public Guid Id { get; set; }
 
-    // Correlation key for every bot call - the Discord channel the ticket lives in.
-    public long DiscordChannelId { get; set; }
-    public long DiscordGuildId { get; set; }
+    // Correlation key for every bot call - the Discord channel the ticket lives in. Stored as
+    // a string, not a numeric type: Discord snowflakes are 64-bit and don't fit safely in a
+    // JS `Number` (the ticket bot's own runtime) or round-trip losslessly through JSON as a
+    // bare number - treating them as opaque strings end-to-end avoids that precision loss.
+    public string DiscordChannelId { get; set; } = string.Empty;
+    public string DiscordGuildId { get; set; } = string.Empty;
 
     // The bot's own incrementing ticket counter (┇{id}┇ in the channel name) - display-only.
     public int TicketNumber { get; set; }

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NexusGuard.Api.Migrations
 {
     [DbContext(typeof(NexusGuardDbContext))]
-    [Migration("20260816215009_AddSupportTickets")]
+    [Migration("20260816222838_AddSupportTickets")]
     partial class AddSupportTickets
     {
         /// <inheritdoc />
@@ -513,11 +513,15 @@ namespace NexusGuard.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<long>("DiscordChannelId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("DiscordChannelId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
-                    b.Property<long>("DiscordGuildId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("DiscordGuildId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("DiscordUserId")
                         .IsRequired()
@@ -572,8 +576,10 @@ namespace NexusGuard.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<long>("DiscordMessageId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("DiscordMessageId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<bool>("IsStaff")
                         .HasColumnType("boolean");
