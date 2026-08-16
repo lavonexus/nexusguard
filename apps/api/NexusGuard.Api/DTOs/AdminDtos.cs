@@ -4,7 +4,7 @@ namespace NexusGuard.Api.DTOs;
 // RequireSiteAdminAsync guard.
 public record AdminUserResponse(
     Guid Id, string Username, string? DisplayName, string? Email,
-    bool DiscordLinked, bool GoogleLinked, bool IsSiteAdmin, DateTime CreatedAt);
+    string? DiscordId, bool GoogleLinked, bool IsSiteAdmin, DateTime CreatedAt);
 
 public record AdminServerResponse(
     Guid Id, string Name, Guid OwnerUserId, string OwnerUsername,

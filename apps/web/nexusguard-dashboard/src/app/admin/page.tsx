@@ -2,25 +2,31 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   ApiError,
   adminCancelPlan,
+  adminDeleteMarketplaceListing,
+  adminDeleteMarketplaceReview,
   adminSetPlan,
   deleteAdminScan,
+  getMarketplaceListing,
   listAdminScans,
   listAdminServers,
   listAdminUsers,
+  listMarketplaceListings,
   setSiteAdmin,
   type AdminScanSummaryResponse,
   type AdminServerResponse,
   type AdminUserResponse,
+  type MarketplaceListingSummaryResponse,
+  type MarketplaceReviewResponse,
   type Plan,
 } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
 import StatusBadge from "@/components/StatusBadge";
 
-type Tab = "users" | "servers" | "scans";
+type Tab = "users" | "servers" | "scans" | "marketplace";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -67,11 +73,15 @@ export default function AdminPage() {
         <TabButton active={tab === "scans"} onClick={() => setTab("scans")}>
           Tarama Yönetimi
         </TabButton>
+        <TabButton active={tab === "marketplace"} onClick={() => setTab("marketplace")}>
+          Mağaza
+        </TabButton>
       </div>
 
       {tab === "servers" && <ServersTab />}
       {tab === "users" && <UsersTab currentUserId={user.id} />}
       {tab === "scans" && <ScansTab />}
+      {tab === "marketplace" && <MarketplaceTab />}
     </div>
   );
 }
@@ -427,7 +437,7 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
             <tr>
               <th className="px-4 py-2 font-medium">Kullanıcı</th>
               <th className="px-4 py-2 font-medium">E-posta</th>
-              <th className="px-4 py-2 font-medium">Discord</th>
+              <th className="px-4 py-2 font-medium">Discord ID</th>
               <th className="px-4 py-2 font-medium">Google</th>
               <th className="px-4 py-2 font-medium">Kayıt</th>
               <th className="px-4 py-2" />
@@ -459,7 +469,7 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
                   )}
                 </td>
                 <td className="px-4 py-2.5 text-zinc-400">{u.email ?? "—"}</td>
-                <td className="px-4 py-2.5 text-zinc-500">{u.discordLinked ? "Bağlı" : "—"}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">{u.discordId ?? "—"}</td>
                 <td className="px-4 py-2.5 text-zinc-500">{u.googleLinked ? "Bağlı" : "—"}</td>
                 <td className="px-4 py-2.5 text-zinc-500">{new Date(u.createdAt).toLocaleDateString("tr-TR")}</td>
                 <td className="px-4 py-2.5 text-right">
@@ -479,6 +489,240 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
                   )}
                 </td>
               </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// Reactive moderation, not pre-publish approval - listings/reviews go live immediately (see
+// MarketplaceController), so this is the only way to take down something inappropriate after
+// the fact. Reviews are only fetched (getMarketplaceListing) when a row is expanded, to avoid
+// N+1 requests for a tab that's mostly just browsed for listing titles/authors.
+function MarketplaceTab() {
+  const [query, setQuery] = useState("");
+  const [listings, setListings] = useState<MarketplaceListingSummaryResponse[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<MarketplaceReviewResponse[] | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [confirmingDeleteReviewId, setConfirmingDeleteReviewId] = useState<string | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+
+  const load = useCallback((q?: string) => {
+    listMarketplaceListings(q)
+      .then(setListings)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı."));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    load(query);
+  }
+
+  async function handleDeleteListing(id: string) {
+    setDeletingId(id);
+    setError(null);
+    try {
+      await adminDeleteMarketplaceListing(id);
+      setListings((prev) => prev?.filter((l) => l.id !== id) ?? null);
+      if (expandedId === id) setExpandedId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    } finally {
+      setDeletingId(null);
+      setConfirmingDeleteId(null);
+    }
+  }
+
+  async function toggleExpand(id: string) {
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(id);
+    setReviews(null);
+    setReviewsError(null);
+    try {
+      const detail = await getMarketplaceListing(id);
+      setReviews(detail.reviews);
+    } catch (err) {
+      setReviewsError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    }
+  }
+
+  async function handleDeleteReview(id: string) {
+    setDeletingReviewId(id);
+    setReviewsError(null);
+    try {
+      await adminDeleteMarketplaceReview(id);
+      setReviews((prev) => prev?.filter((r) => r.id !== id) ?? null);
+      setListings((prev) =>
+        prev?.map((l) => (l.id === expandedId ? { ...l, reviewCount: l.reviewCount - 1 } : l)) ?? null
+      );
+    } catch (err) {
+      setReviewsError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+    } finally {
+      setDeletingReviewId(null);
+      setConfirmingDeleteReviewId(null);
+    }
+  }
+
+  return (
+    <div className="mt-6">
+      <p className="text-sm text-zinc-400">
+        Tool Designer&apos;da paylaşılan tüm mağaza tasarımları - onay mekanizması yok, yayınlanan
+        tasarımlar hemen görünür oluyor. Uygunsuz bir tasarımı ya da yorumu buradan kaldır.
+      </p>
+
+      <form onSubmit={handleSearch} className="mt-4 flex gap-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Başlık ya da yazarın kullanıcı adı ile ara"
+          className="w-full max-w-sm rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
+        />
+        <button type="submit" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600">
+          Ara
+        </button>
+      </form>
+
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+
+      <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-800">
+        <table className="w-full min-w-[820px] text-left text-sm">
+          <thead className="bg-zinc-900 text-zinc-400">
+            <tr>
+              <th className="px-4 py-2 font-medium">Başlık</th>
+              <th className="px-4 py-2 font-medium">Yazar</th>
+              <th className="px-4 py-2 font-medium">Kurulum</th>
+              <th className="px-4 py-2 font-medium">Puan</th>
+              <th className="px-4 py-2 font-medium">Yorum</th>
+              <th className="px-4 py-2 font-medium">Tarih</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800">
+            {listings === null && (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-zinc-500">
+                  Yükleniyor...
+                </td>
+              </tr>
+            )}
+            {listings?.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-zinc-500">
+                  Sonuç bulunamadı.
+                </td>
+              </tr>
+            )}
+            {listings?.map((l) => (
+              <Fragment key={l.id}>
+                <tr>
+                  <td className="px-4 py-2.5 font-medium text-zinc-200">{l.title}</td>
+                  <td className="px-4 py-2.5 text-zinc-400">{l.authorUsername}</td>
+                  <td className="px-4 py-2.5 text-zinc-400">{l.installCount}</td>
+                  <td className="px-4 py-2.5 text-zinc-300">{l.reviewCount === 0 ? "—" : l.averageRating.toFixed(1)}</td>
+                  <td className="px-4 py-2.5 text-zinc-400">{l.reviewCount}</td>
+                  <td className="px-4 py-2.5 text-zinc-500">{new Date(l.createdAt).toLocaleDateString("tr-TR")}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    {confirmingDeleteId === l.id ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-xs text-zinc-500">Emin misin?</span>
+                        <button
+                          onClick={() => handleDeleteListing(l.id)}
+                          disabled={deletingId === l.id}
+                          className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
+                        >
+                          {deletingId === l.id ? "..." : "Evet, sil"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmingDeleteId(null)}
+                          className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
+                        >
+                          Vazgeç
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleExpand(l.id)}
+                          className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-violet-700 hover:text-violet-300"
+                        >
+                          {expandedId === l.id ? "Kapat" : "Yorumlar"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmingDeleteId(l.id)}
+                          className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
+                        >
+                          Sil
+                        </button>
+                      </span>
+                    )}
+                  </td>
+                </tr>
+                {expandedId === l.id && (
+                  <tr>
+                    <td colSpan={7} className="bg-zinc-900/60 px-4 py-3">
+                      {reviewsError && <p className="text-xs text-red-400">{reviewsError}</p>}
+                      {reviews === null && !reviewsError && (
+                        <p className="text-xs text-zinc-500">Yükleniyor...</p>
+                      )}
+                      {reviews?.length === 0 && (
+                        <p className="text-xs text-zinc-500">Bu tasarıma henüz yorum yapılmamış.</p>
+                      )}
+                      {reviews && reviews.length > 0 && (
+                        <div className="space-y-1.5">
+                          {reviews.map((r) => (
+                            <div key={r.id} className="flex items-start justify-between gap-3 rounded-md border border-zinc-800 px-3 py-2">
+                              <div className="min-w-0">
+                                <div className="text-xs font-medium text-zinc-300">
+                                  {r.reviewerUsername} <span className="text-zinc-500">· {r.rating}/5</span>
+                                </div>
+                                {r.comment && <p className="mt-0.5 truncate text-xs text-zinc-500">{r.comment}</p>}
+                              </div>
+                              {confirmingDeleteReviewId === r.id ? (
+                                <span className="flex shrink-0 items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleDeleteReview(r.id)}
+                                    disabled={deletingReviewId === r.id}
+                                    className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
+                                  >
+                                    {deletingReviewId === r.id ? "..." : "Evet, sil"}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmingDeleteReviewId(null)}
+                                    className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
+                                  >
+                                    Vazgeç
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmingDeleteReviewId(r.id)}
+                                  className="shrink-0 rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
+                                >
+                                  Sil
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>

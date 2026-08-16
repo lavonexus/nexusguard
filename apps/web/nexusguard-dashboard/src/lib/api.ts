@@ -354,7 +354,7 @@ export interface AdminUserResponse {
   username: string;
   displayName: string | null;
   email: string | null;
-  discordLinked: boolean;
+  discordId: string | null;
   googleLinked: boolean;
   isSiteAdmin: boolean;
   createdAt: string;

@@ -45,7 +45,7 @@ public class AdminController : ControllerBase
             .Take(200)
             .Select(u => new AdminUserResponse(
                 u.Id, u.Username, u.DisplayName, u.Email,
-                u.DiscordId != null, u.GoogleId != null, u.IsSiteAdmin, u.CreatedAt))
+                u.DiscordId, u.GoogleId != null, u.IsSiteAdmin, u.CreatedAt))
             .ToListAsync();
 
         return result;
@@ -72,7 +72,7 @@ public class AdminController : ControllerBase
 
         return new AdminUserResponse(
             user.Id, user.Username, user.DisplayName, user.Email,
-            user.DiscordId != null, user.GoogleId != null, user.IsSiteAdmin, user.CreatedAt);
+            user.DiscordId, user.GoogleId != null, user.IsSiteAdmin, user.CreatedAt);
     }
 
     [HttpGet("servers")]
