@@ -5,12 +5,141 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, createScan, listScans, type ScanSessionResponse } from "@/lib/api";
 import { loadSession, type ServerSession } from "@/lib/session";
 import { DECISION_COLORS, DECISION_TEXT_CLASS, decisionOf, type Decision } from "@/lib/riskBuckets";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
 
 const POLL_INTERVAL_MS = 4000;
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50] as const;
 
+// Internal identifiers stay the Turkish literals from lib/riskBuckets.ts (decisionOf() returns
+// them, DECISION_COLORS/DECISION_TEXT_CLASS key on them) - only the *displayed* label is
+// translated, via DECISION_LABEL below.
 type FilterPill = "Tümü" | Decision;
 const FILTER_PILLS: FilterPill[] = ["Tümü", "Hile", "Uyarı", "Temiz", "Çalışıyor"];
+
+const DECISION_LABEL: Dict<Record<FilterPill, string>> = {
+  tr: { Tümü: "Tümü", Hile: "Hile", Uyarı: "Uyarı", Temiz: "Temiz", Çalışıyor: "Çalışıyor" },
+  en: { Tümü: "All", Hile: "Cheating", Uyarı: "Warning", Temiz: "Clean", Çalışıyor: "Running" },
+};
+
+const STRINGS: Dict<{
+  title: string;
+  subtitle: string;
+  creating: string;
+  newScan: string;
+  newScanShort: string;
+  apiUnreachable: string;
+  rows: string;
+  searchPlaceholder: string;
+  pin: string;
+  target: string;
+  decision: string;
+  findings: string;
+  time: string;
+  loading: string;
+  noMatches: string;
+  noScansYet: string;
+  showing: string;
+  prev: string;
+  next: string;
+  pinCard: string;
+  active: string;
+  noPendingScan: string;
+  pinCopied: string;
+  copyPin: string;
+  downloadLink: string;
+  share: string;
+  copyLink: string;
+  watchResults: string;
+  quickStats: string;
+  scansThisWeek: string;
+  vsLastWeek: string;
+  detectionRate: string;
+  avgScanDuration: string;
+  completedScans: string;
+  cleanStreak: string;
+  consecutiveClean: string;
+  detectionRateSub: string;
+}> = {
+  tr: {
+    title: "Tarama geçmişi",
+    subtitle: "tarama · başlattığın her adli inceleme",
+    creating: "Oluşturuluyor...",
+    newScan: "+ Yeni tarama",
+    newScanShort: "Yeni tarama",
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    rows: "satır",
+    searchPlaceholder: "İsim ara...",
+    pin: "PIN",
+    target: "Hedef",
+    decision: "Karar",
+    findings: "Bulgular",
+    time: "Zaman",
+    loading: "Yükleniyor...",
+    noMatches: "Filtrelere uyan tarama yok.",
+    noScansYet: "Henüz tarama yok. Yeni tarama başlatarak bir PIN oluştur.",
+    showing: "Gösterilen",
+    prev: "‹ Önceki",
+    next: "Sonraki ›",
+    pinCard: "PIN Kodun",
+    active: "Aktif",
+    noPendingScan: "Şu an bekleyen bir tarama yok.",
+    pinCopied: "Kopyalandı",
+    copyPin: "PIN'i kopyala",
+    downloadLink: "İndirme bağlantısı",
+    share: "Paylaş",
+    copyLink: "Bağlantıyı kopyala",
+    watchResults: "Sonuçları izle",
+    quickStats: "Hızlı istatistikler",
+    scansThisWeek: "Bu haftaki taramalar",
+    vsLastWeek: "geçen haftaya göre",
+    detectionRate: "Tespit oranı",
+    avgScanDuration: "Ort. tarama süresi",
+    completedScans: "tamamlanan taramalar",
+    cleanStreak: "Temiz serisi",
+    consecutiveClean: "üst üste temiz",
+    detectionRateSub: "{total} taramada {flagged} işaretli",
+  },
+  en: {
+    title: "Scan history",
+    subtitle: "scans · every investigation you've started",
+    creating: "Creating...",
+    newScan: "+ New scan",
+    newScanShort: "New scan",
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    rows: "rows",
+    searchPlaceholder: "Search by name...",
+    pin: "PIN",
+    target: "Target",
+    decision: "Decision",
+    findings: "Findings",
+    time: "Time",
+    loading: "Loading...",
+    noMatches: "No scans match the filters.",
+    noScansYet: "No scans yet. Start a new scan to generate a PIN.",
+    showing: "Showing",
+    prev: "‹ Previous",
+    next: "Next ›",
+    pinCard: "Your PIN Code",
+    active: "Active",
+    noPendingScan: "No scan pending right now.",
+    pinCopied: "Copied",
+    copyPin: "Copy PIN",
+    downloadLink: "Download link",
+    share: "Share",
+    copyLink: "Copy link",
+    watchResults: "Watch results",
+    quickStats: "Quick stats",
+    scansThisWeek: "Scans this week",
+    vsLastWeek: "vs. last week",
+    detectionRate: "Detection rate",
+    avgScanDuration: "Avg. scan duration",
+    completedScans: "completed scans",
+    cleanStreak: "Clean streak",
+    consecutiveClean: "consecutive clean",
+    detectionRateSub: "{flagged} flagged of {total} scans",
+  },
+};
 
 interface ActiveScan {
   scanId: string;
@@ -24,6 +153,9 @@ function activeScanStorageKey(serverId: string) {
 
 export default function ScansPage() {
   const router = useRouter();
+  const { locale } = useLocale();
+  const t = useT(STRINGS);
+  const decisionLabel = useT(DECISION_LABEL);
   const [session, setSession] = useState<ServerSession | null>(null);
   const [scans, setScans] = useState<ScanSessionResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,15 +186,18 @@ export default function ScansPage() {
     }
   }, [router]);
 
-  const refresh = useCallback(async (apiKey: string) => {
-    try {
-      const data = await listScans(apiKey);
-      setScans(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
-    }
-  }, []);
+  const refresh = useCallback(
+    async (apiKey: string) => {
+      try {
+        const data = await listScans(apiKey);
+        setScans(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : t.apiUnreachable);
+      }
+    },
+    [t.apiUnreachable]
+  );
 
   useEffect(() => {
     if (!session) return;
@@ -93,7 +228,7 @@ export default function ScansPage() {
       sessionStorage.setItem(activeScanStorageKey(session.serverId), JSON.stringify(next));
       refresh(session.apiKey);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
     } finally {
       setCreating(false);
     }
@@ -172,9 +307,9 @@ export default function ScansPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Tarama geçmişi</h1>
+          <h1 className="text-xl font-semibold text-white">{t.title}</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            {counts.Tümü} tarama · başlattığın her adli inceleme
+            {counts.Tümü} {t.subtitle}
           </p>
         </div>
         <button
@@ -182,7 +317,7 @@ export default function ScansPage() {
           disabled={creating}
           className="rounded-md bg-violet-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {creating ? "Oluşturuluyor..." : "+ Yeni tarama"}
+          {creating ? t.creating : t.newScan}
         </button>
       </div>
 
@@ -215,7 +350,7 @@ export default function ScansPage() {
                       style={{ backgroundColor: DECISION_COLORS[f] }}
                     />
                   )}
-                  {f} {counts[f]}
+                  {decisionLabel[f]} {counts[f]}
                 </button>
               ))}
             </div>
@@ -231,7 +366,7 @@ export default function ScansPage() {
               >
                 {ROWS_PER_PAGE_OPTIONS.map((n) => (
                   <option key={n} value={n}>
-                    {n} satır
+                    {n} {t.rows}
                   </option>
                 ))}
               </select>
@@ -241,7 +376,7 @@ export default function ScansPage() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                placeholder="İsim ara..."
+                placeholder={t.searchPlaceholder}
                 className="w-40 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs outline-none focus:border-violet-600"
               />
             </div>
@@ -251,11 +386,11 @@ export default function ScansPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-zinc-900 text-[11px] uppercase tracking-wide text-zinc-500">
                 <tr>
-                  <th className="px-4 py-2 font-medium">PIN</th>
-                  <th className="px-4 py-2 font-medium">Hedef</th>
-                  <th className="px-4 py-2 font-medium">Karar</th>
-                  <th className="px-4 py-2 font-medium">Bulgular</th>
-                  <th className="px-4 py-2 font-medium">Zaman</th>
+                  <th className="px-4 py-2 font-medium">{t.pin}</th>
+                  <th className="px-4 py-2 font-medium">{t.target}</th>
+                  <th className="px-4 py-2 font-medium">{t.decision}</th>
+                  <th className="px-4 py-2 font-medium">{t.findings}</th>
+                  <th className="px-4 py-2 font-medium">{t.time}</th>
                   <th className="w-6" />
                 </tr>
               </thead>
@@ -263,16 +398,14 @@ export default function ScansPage() {
                 {pagedScans === null && (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                      Yükleniyor...
+                      {t.loading}
                     </td>
                   </tr>
                 )}
                 {pagedScans !== null && pagedScans.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                      {scans && scans.length > 0
-                        ? "Filtrelere uyan tarama yok."
-                        : "Henüz tarama yok. Yeni tarama başlatarak bir PIN oluştur."}
+                      {scans && scans.length > 0 ? t.noMatches : t.noScansYet}
                     </td>
                   </tr>
                 )}
@@ -300,7 +433,7 @@ export default function ScansPage() {
                         </div>
                       </td>
                       <td className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wide ${DECISION_TEXT_CLASS[decision]}`}>
-                        {decision}
+                        {decisionLabel[decision]}
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800">
@@ -311,7 +444,7 @@ export default function ScansPage() {
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-zinc-500">
-                        {new Date(scan.createdAt).toLocaleDateString("tr-TR", { day: "2-digit", month: "short" })}
+                        {new Date(scan.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR", { day: "2-digit", month: "short" })}
                       </td>
                       <td className="px-4 py-2.5 text-zinc-600">›</td>
                     </tr>
@@ -324,7 +457,7 @@ export default function ScansPage() {
           {visibleScans && visibleScans.length > 0 && (
             <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
               <span>
-                Gösterilen: {(pageSafe - 1) * rowsPerPage + 1}–
+                {t.showing}: {(pageSafe - 1) * rowsPerPage + 1}–
                 {Math.min(pageSafe * rowsPerPage, visibleScans.length)} / {visibleScans.length}
               </span>
               <div className="flex items-center gap-1.5">
@@ -333,7 +466,7 @@ export default function ScansPage() {
                   disabled={pageSafe === 1}
                   className="rounded-md border border-zinc-800 px-2.5 py-1 text-zinc-300 hover:border-zinc-700 disabled:opacity-40"
                 >
-                  ‹ Önceki
+                  {t.prev}
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                   <button
@@ -351,7 +484,7 @@ export default function ScansPage() {
                   disabled={pageSafe === totalPages}
                   className="rounded-md border border-zinc-800 px-2.5 py-1 text-zinc-300 hover:border-zinc-700 disabled:opacity-40"
                 >
-                  Sonraki ›
+                  {t.next}
                 </button>
               </div>
             </div>
@@ -362,25 +495,25 @@ export default function ScansPage() {
           <div className="overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900/40 to-transparent">
             <div className="flex items-center justify-between px-4 pt-4">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-                <span className="text-sm">🔑</span> PIN Kodun
+                <span className="text-sm">🔑</span> {t.pinCard}
               </span>
               {activeScan && (
                 <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400 ring-1 ring-inset ring-emerald-500/30">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Aktif
+                  {t.active}
                 </span>
               )}
             </div>
 
             {!activeScan ? (
               <div className="mx-4 mb-4 mt-3 rounded-lg border border-dashed border-zinc-800 px-3 py-6 text-center">
-                <p className="text-xs text-zinc-500">Şu an bekleyen bir tarama yok.</p>
+                <p className="text-xs text-zinc-500">{t.noPendingScan}</p>
                 <button
                   onClick={handleNewScan}
                   disabled={creating}
                   className="mt-3 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-500 disabled:opacity-60"
                 >
-                  {creating ? "Oluşturuluyor..." : "Yeni tarama"}
+                  {creating ? t.creating : t.newScanShort}
                 </button>
               </div>
             ) : (
@@ -400,17 +533,17 @@ export default function ScansPage() {
                   className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-500"
                 >
                   <span aria-hidden>⧉</span>
-                  {copiedField === "pin" ? "Kopyalandı" : "PIN'i kopyala"}
+                  {copiedField === "pin" ? t.pinCopied : t.copyPin}
                 </button>
 
                 <div className="mt-4 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                  <span>İndirme bağlantısı</span>
+                  <span>{t.downloadLink}</span>
                   <button
                     onClick={() => handleCopy("link", downloadLink)}
                     className="flex items-center gap-1 text-violet-400 transition-colors hover:text-violet-300"
                   >
                     <span aria-hidden>↗</span>
-                    {copiedField === "link" ? "Kopyalandı" : "Paylaş"}
+                    {copiedField === "link" ? t.pinCopied : t.share}
                   </button>
                 </div>
                 <div className="mt-1.5 flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 py-1.5 pl-2.5 pr-1.5">
@@ -422,7 +555,7 @@ export default function ScansPage() {
                   </span>
                   <button
                     onClick={() => handleCopy("link", downloadLink)}
-                    title="Bağlantıyı kopyala"
+                    title={t.copyLink}
                     className="flex shrink-0 items-center justify-center rounded-md border border-zinc-700 px-2 py-1.5 text-xs text-zinc-300 transition-colors hover:border-violet-700 hover:text-violet-300"
                   >
                     <span aria-hidden>⧉</span>
@@ -433,7 +566,7 @@ export default function ScansPage() {
                   onClick={() => router.push(`/scans/${activeScan.scanId}`)}
                   className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-900/60"
                 >
-                  Sonuçları izle
+                  {t.watchResults}
                   <span aria-hidden>→</span>
                 </button>
               </div>
@@ -442,33 +575,33 @@ export default function ScansPage() {
 
           <div className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900/40 to-transparent p-4">
             <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-              <span className="text-sm">📊</span> Hızlı istatistikler
+              <span className="text-sm">📊</span> {t.quickStats}
             </span>
             <div className="mt-3 space-y-1">
               <QuickStat
                 icon="📅"
-                label="Bu haftaki taramalar"
-                sub="geçen haftaya göre"
+                label={t.scansThisWeek}
+                sub={t.vsLastWeek}
                 value={quickStats?.thisWeek}
                 delta={quickStats?.weekDelta ?? undefined}
               />
               <QuickStat
                 icon="🎯"
-                label="Tespit oranı"
-                sub={`${counts.Tümü} taramada ${counts.Hile} işaretli`}
+                label={t.detectionRate}
+                sub={t.detectionRateSub.replace("{flagged}", String(counts.Hile)).replace("{total}", String(counts.Tümü))}
                 value={quickStats ? `${quickStats.detectionRate.toFixed(1)}%` : undefined}
                 valueClassName={quickStats && quickStats.detectionRate > 0 ? "text-red-400" : undefined}
               />
               <QuickStat
                 icon="⏱"
-                label="Ort. tarama süresi"
-                sub="tamamlanan taramalar"
+                label={t.avgScanDuration}
+                sub={t.completedScans}
                 value={quickStats?.avgDurationMs != null ? formatDuration(quickStats.avgDurationMs) : "—"}
               />
               <QuickStat
                 icon="✨"
-                label="Temiz serisi"
-                sub="üst üste temiz"
+                label={t.cleanStreak}
+                sub={t.consecutiveClean}
                 value={quickStats?.cleanStreak}
                 valueClassName="text-emerald-400"
               />

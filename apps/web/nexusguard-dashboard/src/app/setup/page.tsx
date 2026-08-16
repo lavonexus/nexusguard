@@ -15,12 +15,142 @@ import {
   type UserResponse,
 } from "@/lib/api";
 import { saveSession } from "@/lib/session";
+import { useLocale, type Locale } from "@/lib/i18n/LocaleContext";
+import { useT, type Dict } from "@/lib/i18n/useT";
 
 type AuthState = "checking" | "signed-out" | "signed-in";
 
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  oauth_state_mismatch: "Giriş süresi doldu ya da bozuldu - tekrar dene.",
-  oauth_exchange_failed: "Giriş sağlayıcı girişi onaylamadı - tekrar dene.",
+const OAUTH_ERROR_MESSAGES: Dict<Record<string, string>> = {
+  tr: {
+    oauth_state_mismatch: "Giriş süresi doldu ya da bozuldu - tekrar dene.",
+    oauth_exchange_failed: "Giriş sağlayıcı girişi onaylamadı - tekrar dene.",
+  },
+  en: {
+    oauth_state_mismatch: "The login expired or was corrupted - try again.",
+    oauth_exchange_failed: "The login provider didn't confirm the sign-in - try again.",
+  },
+};
+
+const STRINGS: Dict<{
+  loading: string;
+  signInTitle: string;
+  signInSubtitle: string;
+  genericLoginFailed: string;
+  loginWithDiscord: string;
+  or: string;
+  continueWithGoogle: string;
+  googleNotConfigured: string;
+  saveApiKeyNote: string;
+  copied: string;
+  copy: string;
+  continueToDashboard: string;
+  welcome: string;
+  pickOrCreate: string;
+  loadingServers: string;
+  newServer: string;
+  serverNameRequired: string;
+  creating: string;
+  create: string;
+  myFivemServer: string;
+  apiUnreachable: string;
+  welcomeEnterprise: string;
+  nameYourServer: string;
+  nameYourServerSubtitle: string;
+  serverNamePlaceholder: string;
+  savingContinue: string;
+  saveAndAccess: string;
+  enterpriseBadge: string;
+  teamMember: string;
+  active: string;
+  inactive: string;
+  createdOn: string;
+  useThisServer: string;
+  confirm: string;
+  cancel: string;
+  rotateWarning: string;
+}> = {
+  tr: {
+    loading: "Yükleniyor...",
+    signInTitle: "NexusGuard'a giriş yap",
+    signInSubtitle: "Yönetici erişimi Discord ya da Google hesabınla bağlantılıdır.",
+    genericLoginFailed: "Giriş başarısız - tekrar dene.",
+    loginWithDiscord: "Discord ile giriş yap",
+    or: "veya",
+    continueWithGoogle: "Google ile devam et",
+    googleNotConfigured:
+      "Google ile giriş bu ortamda henüz yapılandırılmadı - önce Google Cloud Console'dan bir OAuth istemcisi oluşturup sunucu tarafına eklemen gerekiyor.",
+    saveApiKeyNote:
+      "Bu API anahtarını şimdi kaydet - yalnızca bir kez gösterilir, tekrar alınamaz, sadece yenilenebilir. Bot kurduysan Discord'da /nexusguard-link için gerekecek.",
+    copied: "Kopyalandı",
+    copy: "Kopyala",
+    continueToDashboard: "Dashboard'a devam et",
+    welcome: "Hoş geldin",
+    pickOrCreate: "Yöneteceğin bir sunucu seç ya da yeni bir tane oluştur.",
+    loadingServers: "Sunucular yükleniyor...",
+    newServer: "Yeni sunucu",
+    serverNameRequired: "Sunucu adı gerekli.",
+    creating: "Oluşturuluyor...",
+    create: "Oluştur",
+    myFivemServer: "FiveM Sunucum",
+    apiUnreachable: "NexusGuard API'ye ulaşılamadı.",
+    welcomeEnterprise: "✦ Enterprise'a hoş geldin",
+    nameYourServer: "Sunucuna bir isim ver",
+    nameYourServerSubtitle:
+      "Ekibinin panelde göreceği asıl sunucu adını gir - istediğin zaman Ayarlar'dan değiştirebilirsin.",
+    serverNamePlaceholder: "Sunucu adı",
+    savingContinue: "Kaydediliyor...",
+    saveAndAccess: "Kaydet ve Panele Eriş",
+    enterpriseBadge: "Enterprise",
+    teamMember: "Ekip üyesi",
+    active: "Aktif",
+    inactive: "Pasif",
+    createdOn: "oluşturuldu",
+    useThisServer: "Bu sunucuyu kullan",
+    confirm: "Onayla",
+    cancel: "Vazgeç",
+    rotateWarning: "Bu sunucu için yeni bir API anahtarı verir - eski anahtar anında çalışmaz hale gelir.",
+  },
+  en: {
+    loading: "Loading...",
+    signInTitle: "Sign in to NexusGuard",
+    signInSubtitle: "Admin access is linked to your Discord or Google account.",
+    genericLoginFailed: "Sign-in failed - try again.",
+    loginWithDiscord: "Sign in with Discord",
+    or: "or",
+    continueWithGoogle: "Continue with Google",
+    googleNotConfigured:
+      "Google sign-in isn't configured in this environment yet - an OAuth client needs to be created in Google Cloud Console and added server-side first.",
+    saveApiKeyNote:
+      "Save this API key now - it's shown only once and can't be retrieved again, only rotated. If you've set up the bot, you'll need it for /nexusguard-link on Discord.",
+    copied: "Copied",
+    copy: "Copy",
+    continueToDashboard: "Continue to dashboard",
+    welcome: "Welcome",
+    pickOrCreate: "Pick a server to manage or create a new one.",
+    loadingServers: "Loading servers...",
+    newServer: "New server",
+    serverNameRequired: "Server name is required.",
+    creating: "Creating...",
+    create: "Create",
+    myFivemServer: "My FiveM Server",
+    apiUnreachable: "Couldn't reach the NexusGuard API.",
+    welcomeEnterprise: "✦ Welcome to Enterprise",
+    nameYourServer: "Give your server a name",
+    nameYourServerSubtitle:
+      "Enter the actual server name your team will see on the dashboard - you can change it anytime from Settings.",
+    serverNamePlaceholder: "Server name",
+    savingContinue: "Saving...",
+    saveAndAccess: "Save and Access Dashboard",
+    enterpriseBadge: "Enterprise",
+    teamMember: "Team member",
+    active: "Active",
+    inactive: "Inactive",
+    createdOn: "created",
+    useThisServer: "Use this server",
+    confirm: "Confirm",
+    cancel: "Cancel",
+    rotateWarning: "This issues a new API key for this server - the old key stops working immediately.",
+  },
 };
 
 export default function SetupPage() {
@@ -35,6 +165,9 @@ function SetupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const oauthError = searchParams.get("error");
+  const { locale } = useLocale();
+  const t = useT(STRINGS);
+  const oauthMessages = useT(OAUTH_ERROR_MESSAGES);
 
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [user, setUser] = useState<UserResponse | null>(null);
@@ -69,7 +202,7 @@ function SetupPageContent() {
           if (provisionStarted.current) return;
           provisionStarted.current = true;
           setAutoProvisioning(true);
-          const server = await createServerForCurrentUser("FiveM Sunucum");
+          const server = await createServerForCurrentUser(t.myFivemServer);
           saveSession({
             userId: currentUser!.id,
             serverId: server.id,
@@ -109,7 +242,7 @@ function SetupPageContent() {
         if (err instanceof ApiError && err.status === 401) {
           setAuthState("signed-out");
         } else {
-          setError("NexusGuard API'ye ulaşılamadı.");
+          setError(t.apiUnreachable);
           setAuthState("signed-out");
         }
       });
@@ -135,20 +268,18 @@ function SetupPageContent() {
   }
 
   if (authState === "checking" || autoProvisioning) {
-    return <p className="mt-6 text-center text-sm text-zinc-500">Yükleniyor...</p>;
+    return <p className="mt-6 text-center text-sm text-zinc-500">{t.loading}</p>;
   }
 
   if (authState === "signed-out") {
     return (
       <div className="mx-auto max-w-sm text-center">
-        <h1 className="text-xl font-semibold text-white">NexusGuard&apos;a giriş yap</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Yönetici erişimi Discord ya da Google hesabınla bağlantılıdır.
-        </p>
+        <h1 className="text-xl font-semibold text-white">{t.signInTitle}</h1>
+        <p className="mt-2 text-sm text-zinc-400">{t.signInSubtitle}</p>
 
         {oauthError && (
           <p className="mt-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">
-            {OAUTH_ERROR_MESSAGES[oauthError] ?? "Giriş başarısız - tekrar dene."}
+            {oauthMessages[oauthError] ?? t.genericLoginFailed}
           </p>
         )}
         {error && (
@@ -162,12 +293,12 @@ function SetupPageContent() {
           className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#5865F2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4752c4]"
         >
           <DiscordMark />
-          Discord ile giriş yap
+          {t.loginWithDiscord}
         </a>
 
         <div className="mt-3 flex items-center gap-3 text-xs text-zinc-600">
           <span className="h-px flex-1 bg-zinc-800" />
-          veya
+          {t.or}
           <span className="h-px flex-1 bg-zinc-800" />
         </div>
 
@@ -176,13 +307,10 @@ function SetupPageContent() {
           className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-700 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100"
         >
           <GoogleMark />
-          Google ile devam et
+          {t.continueWithGoogle}
         </a>
 
-        <p className="mt-4 text-xs text-zinc-600">
-          Google ile giriş bu ortamda henüz yapılandırılmadı - önce Google Cloud Console&apos;dan bir
-          OAuth istemcisi oluşturup sunucu tarafına eklemen gerekiyor.
-        </p>
+        <p className="mt-4 text-xs text-zinc-600">{t.googleNotConfigured}</p>
       </div>
     );
   }
@@ -191,11 +319,7 @@ function SetupPageContent() {
     return (
       <div className="mx-auto max-w-md">
         <h1 className="text-xl font-semibold text-white">{revealed.name}</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Bu API anahtarını şimdi kaydet - yalnızca bir kez gösterilir, tekrar alınamaz, sadece
-          yenilenebilir. Bot kurduysan Discord&apos;da{" "}
-          <code className="text-zinc-300">/nexusguard-link</code> için gerekecek.
-        </p>
+        <p className="mt-1 text-sm text-zinc-400">{t.saveApiKeyNote}</p>
 
         <div className="mt-6 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3">
           <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-violet-400">
@@ -205,7 +329,7 @@ function SetupPageContent() {
             onClick={handleCopy}
             className="shrink-0 rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-zinc-600"
           >
-            {copied ? "Kopyalandı" : "Kopyala"}
+            {copied ? t.copied : t.copy}
           </button>
         </div>
 
@@ -213,7 +337,7 @@ function SetupPageContent() {
           onClick={handleContinue}
           className="mt-6 w-full rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
         >
-          Dashboard'a devam et
+          {t.continueToDashboard}
         </button>
       </div>
     );
@@ -223,26 +347,28 @@ function SetupPageContent() {
   // server list - naming their server is the one thing standing between them and the panel.
   const soloServer = servers?.length === 1 ? servers[0] : null;
   if (soloServer && soloServer.role === "Owner" && soloServer.needsSetup) {
-    return <EnterpriseOnboarding server={soloServer} onReady={setRevealed} />;
+    return <EnterpriseOnboarding server={soloServer} t={t} onReady={setRevealed} />;
   }
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="text-xl font-semibold text-white">Hoş geldin, {user?.username}</h1>
-      <p className="mt-1 text-sm text-zinc-400">Yöneteceğin bir sunucu seç ya da yeni bir tane oluştur.</p>
+      <h1 className="text-xl font-semibold text-white">
+        {t.welcome}, {user?.username}
+      </h1>
+      <p className="mt-1 text-sm text-zinc-400">{t.pickOrCreate}</p>
 
-      {servers === null && <p className="mt-6 text-sm text-zinc-500">Sunucular yükleniyor...</p>}
+      {servers === null && <p className="mt-6 text-sm text-zinc-500">{t.loadingServers}</p>}
 
       {servers !== null && servers.length > 0 && (
         <div className="mt-6 space-y-2">
           {servers.map((server) => (
-            <ServerRow key={server.id} server={server} onReady={setRevealed} />
+            <ServerRow key={server.id} server={server} t={t} locale={locale} onReady={setRevealed} />
           ))}
         </div>
       )}
 
       <div className="mt-6 border-t border-zinc-800 pt-6">
-        <NewServerForm onReady={setRevealed} />
+        <NewServerForm t={t} onReady={setRevealed} />
       </div>
     </div>
   );
@@ -250,9 +376,11 @@ function SetupPageContent() {
 
 function EnterpriseOnboarding({
   server,
+  t,
   onReady,
 }: {
   server: MyServerResponse;
+  t: (typeof STRINGS)["tr"];
   onReady: (server: { id: string; name: string; apiKey: string }) => void;
 }) {
   const [name, setName] = useState(server.name);
@@ -262,7 +390,7 @@ function EnterpriseOnboarding({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Sunucu adı gerekli.");
+      setError(t.serverNameRequired);
       return;
     }
 
@@ -273,7 +401,7 @@ function EnterpriseOnboarding({
       const { apiKey } = await rotateApiKeyAsOwner(server.id);
       onReady({ id: renamed.id, name: renamed.name, apiKey });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
       setLoading(false);
     }
   }
@@ -281,13 +409,10 @@ function EnterpriseOnboarding({
   return (
     <div className="mx-auto max-w-md">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-800 bg-violet-950/50 px-2.5 py-1 text-xs font-medium text-violet-300">
-        ✦ Enterprise&apos;a hoş geldin
+        {t.welcomeEnterprise}
       </span>
-      <h1 className="mt-3 text-xl font-semibold text-white">Sunucuna bir isim ver</h1>
-      <p className="mt-1 text-sm text-zinc-400">
-        Ekibinin panelde göreceği asıl sunucu adını gir - istediğin zaman Ayarlar&apos;dan
-        değiştirebilirsin.
-      </p>
+      <h1 className="mt-3 text-xl font-semibold text-white">{t.nameYourServer}</h1>
+      <p className="mt-1 text-sm text-zinc-400">{t.nameYourServerSubtitle}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-3">
         <input
@@ -295,14 +420,14 @@ function EnterpriseOnboarding({
           onChange={(e) => setName(e.target.value)}
           autoFocus
           className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
-          placeholder="Sunucu adı"
+          placeholder={t.serverNamePlaceholder}
         />
         <button
           type="submit"
           disabled={loading}
           className="w-full rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Kaydediliyor..." : "Kaydet ve Panele Eriş"}
+          {loading ? t.savingContinue : t.saveAndAccess}
         </button>
         {error && <p className="text-sm text-red-400">{error}</p>}
       </form>
@@ -312,9 +437,13 @@ function EnterpriseOnboarding({
 
 function ServerRow({
   server,
+  t,
+  locale,
   onReady,
 }: {
   server: MyServerResponse;
+  t: (typeof STRINGS)["tr"];
+  locale: Locale;
   onReady: (server: { id: string; name: string; apiKey: string }) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -328,7 +457,7 @@ function ServerRow({
       const { apiKey } = await rotateApiKeyAsOwner(server.id);
       onReady({ id: server.id, name: server.name, apiKey });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
       setLoading(false);
     }
   }
@@ -340,17 +469,17 @@ function ServerRow({
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-zinc-200">{server.name}</span>
             <span className="rounded border border-violet-800 bg-violet-950/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300">
-              Enterprise
+              {t.enterpriseBadge}
             </span>
             {server.role === "Member" && (
               <span className="rounded border border-violet-800 bg-violet-950/50 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
-                Ekip üyesi
+                {t.teamMember}
               </span>
             )}
           </div>
           <div className="text-xs text-zinc-500">
-            {server.isActive ? "Aktif" : "Pasif"} · oluşturuldu{" "}
-            {new Date(server.createdAt).toLocaleDateString("tr-TR")}
+            {server.isActive ? t.active : t.inactive} · {t.createdOn}{" "}
+            {new Date(server.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR")}
           </div>
         </div>
 
@@ -359,7 +488,7 @@ function ServerRow({
             onClick={() => setConfirming(true)}
             className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-600"
           >
-            Bu sunucuyu kullan
+            {t.useThisServer}
           </button>
         ) : (
           <div className="flex items-center gap-2">
@@ -368,31 +497,29 @@ function ServerRow({
               disabled={loading}
               className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
             >
-              {loading ? "..." : "Onayla"}
+              {loading ? "..." : t.confirm}
             </button>
             <button
               onClick={() => setConfirming(false)}
               className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-600"
             >
-              Vazgeç
+              {t.cancel}
             </button>
           </div>
         )}
       </div>
 
-      {confirming && !error && (
-        <p className="mt-2 text-xs text-amber-500">
-          Bu sunucu için yeni bir API anahtarı verir - eski anahtar anında çalışmaz hale gelir.
-        </p>
-      )}
+      {confirming && !error && <p className="mt-2 text-xs text-amber-500">{t.rotateWarning}</p>}
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
     </div>
   );
 }
 
 function NewServerForm({
+  t,
   onReady,
 }: {
+  t: (typeof STRINGS)["tr"];
   onReady: (server: { id: string; name: string; apiKey: string }) => void;
 }) {
   const [name, setName] = useState("My FiveM Server");
@@ -402,7 +529,7 @@ function NewServerForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Sunucu adı gerekli.");
+      setError(t.serverNameRequired);
       return;
     }
 
@@ -412,27 +539,27 @@ function NewServerForm({
       const server = await createServerForCurrentUser(name.trim());
       onReady(server);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "NexusGuard API'ye ulaşılamadı.");
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
       setLoading(false);
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <label className="block text-sm font-medium text-zinc-300">Yeni sunucu</label>
+      <label className="block text-sm font-medium text-zinc-300">{t.newServer}</label>
       <div className="flex gap-2">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
-          placeholder="FiveM Sunucum"
+          placeholder={t.myFivemServer}
         />
         <button
           type="submit"
           disabled={loading}
           className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Oluşturuluyor..." : "Oluştur"}
+          {loading ? t.creating : t.create}
         </button>
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
