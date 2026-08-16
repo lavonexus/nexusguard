@@ -36,9 +36,11 @@ const STRINGS: Dict<{
   sectionMain: string;
   sectionTools: string;
   sectionOther: string;
+  sectionSupport: string;
   sectionAdmin: string;
   marketplace: string;
   settings: string;
+  tickets: string;
   adminPanel: string;
   adminBadge: string;
   proBadge: string;
@@ -52,9 +54,11 @@ const STRINGS: Dict<{
     sectionMain: "Ana",
     sectionTools: "Araçlar",
     sectionOther: "Diğer",
+    sectionSupport: "Destek",
     sectionAdmin: "Yönetim",
     marketplace: "Mağaza",
     settings: "Ayarlar",
+    tickets: "Biletlerim",
     adminPanel: "Yönetici Paneli",
     adminBadge: "ADMIN",
     proBadge: "PRO",
@@ -68,9 +72,11 @@ const STRINGS: Dict<{
     sectionMain: "Main",
     sectionTools: "Tools",
     sectionOther: "Other",
+    sectionSupport: "Support",
     sectionAdmin: "Admin",
     marketplace: "Marketplace",
     settings: "Settings",
+    tickets: "My Tickets",
     adminPanel: "Admin Panel",
     adminBadge: "ADMIN",
     proBadge: "PRO",
@@ -176,6 +182,18 @@ export default function DashboardSidebar() {
             }`}
           >
             {t.settings}
+          </Link>
+        </div>
+
+        <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">{t.sectionSupport}</div>
+        <div className="mt-1 space-y-0.5">
+          <Link
+            href="/tickets"
+            className={`block rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
+              pathname === "/tickets" ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+            }`}
+          >
+            {t.tickets}
           </Link>
         </div>
 

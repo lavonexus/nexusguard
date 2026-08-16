@@ -552,3 +552,42 @@ export function getAdminScan(id: string) {
 export function deleteAdminScan(id: string) {
   return sessionRequest<void>(`/api/admin/scans/${id}`, { method: "DELETE" });
 }
+
+// --- Biletlerim (Controllers/TicketsController.cs) -----------------------------------------
+// Read-only mirror of the customer's own Discord support tickets, synced in live by a separate
+// bot (nexus-ticketbot). No write endpoints anywhere here - replies only ever happen on
+// Discord, this is a transcript viewer, not a second inbox. Scoped by the caller's own linked
+// Discord ID server-side, so only tickets that user actually opened ever come back.
+
+export interface SupportTicketSummaryResponse {
+  id: string;
+  ticketNumber: number;
+  category: string;
+  status: "Open" | "Closed";
+  openedAt: string;
+  closedAt: string | null;
+  messageCount: number;
+}
+
+export interface SupportTicketMessageResponse {
+  id: string;
+  authorDiscordId: string;
+  authorUsername: string;
+  authorAvatarUrl: string | null;
+  isStaff: boolean;
+  content: string;
+  createdAt: string;
+}
+
+export interface SupportTicketDetailResponse {
+  summary: SupportTicketSummaryResponse;
+  messages: SupportTicketMessageResponse[];
+}
+
+export function listMyTickets() {
+  return sessionRequest<SupportTicketSummaryResponse[]>("/api/tickets");
+}
+
+export function getTicket(id: string) {
+  return sessionRequest<SupportTicketDetailResponse>(`/api/tickets/${id}`);
+}
