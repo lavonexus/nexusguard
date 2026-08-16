@@ -48,6 +48,24 @@ public class ScanSession
     // there was nothing to summarize yet.
     public string? AiSummary { get; set; }
 
+    // Set only when the scan was started via the Discord bot's /nexusguard-scan command - the
+    // admin picked this member through Discord's own UI, and Discord's API handed the bot
+    // their real identity as a normal part of running the command. Never populated any other
+    // way - nothing is ever read from the scanned player's own machine to get this (that would
+    // mean scraping Discord's local session storage, which is exactly what real Discord-token-
+    // stealing malware does).
+    public string? DiscordUserId { get; set; }
+    public string? DiscordUsername { get; set; }
+    public string? DiscordAvatarUrl { get; set; }
+
+    // Populated from the scanner's own SteamFact (a bare, non-sensitive SteamID64 read from
+    // the local Steam client's own registry key - see SteamScanner) plus a server-side call to
+    // Steam's public Web API for the matching display name/avatar. Null whenever Steam wasn't
+    // running on the scanned machine.
+    public string? SteamId64 { get; set; }
+    public string? SteamUsername { get; set; }
+    public string? SteamAvatarUrl { get; set; }
+
     public ICollection<ScanResult> Results { get; set; } = new List<ScanResult>();
     public ICollection<Detection> Detections { get; set; } = new List<Detection>();
 }

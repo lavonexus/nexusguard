@@ -61,6 +61,7 @@ builder.Services.AddScoped<IDetectionEngine, DetectionEngine>();
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 builder.Services.AddHttpClient<IDiscordOAuthService, DiscordOAuthService>();
 builder.Services.AddHttpClient<IGoogleOAuthService, GoogleOAuthService>();
+builder.Services.AddHttpClient<ISteamProfileService, SteamProfileService>();
 builder.Services.AddScoped<IAiSummaryService, AiSummaryService>();
 builder.Services.AddScoped<IScannerThemeService, ScannerThemeService>();
 

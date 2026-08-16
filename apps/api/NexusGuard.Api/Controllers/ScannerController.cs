@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusGuard.Api.Auth;
@@ -13,21 +14,28 @@ public class ScannerController : ControllerBase
 {
     private const int MaxFileBytes = 25 * 1024 * 1024;
 
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
     private readonly IScanSessionService _scanSessions;
     private readonly IDetectionEngine _detectionEngine;
     private readonly IYaraScanEngine _yara;
     private readonly IAiSummaryService _aiSummary;
     private readonly IScannerThemeService _themes;
+    private readonly ISteamProfileService _steamProfiles;
 
     public ScannerController(
         IScanSessionService scanSessions, IDetectionEngine detectionEngine, IYaraScanEngine yara,
-        IAiSummaryService aiSummary, IScannerThemeService themes)
+        IAiSummaryService aiSummary, IScannerThemeService themes, ISteamProfileService steamProfiles)
     {
         _scanSessions = scanSessions;
         _detectionEngine = detectionEngine;
         _yara = yara;
         _aiSummary = aiSummary;
         _themes = themes;
+        _steamProfiles = steamProfiles;
     }
 
     // The only anonymous endpoint in this controller: Scanner.exe trades the human-entered
@@ -132,9 +140,45 @@ public class ScannerController : ControllerBase
     {
         var (riskScore, detections) = await _detectionEngine.EvaluateAsync(CurrentSession.Id);
         var summary = await _aiSummary.SummarizeAsync(CurrentSession.PlayerIdentifier, riskScore, detections);
+        await EnrichSteamIdentityAsync();
         await _scanSessions.CompleteAsync(CurrentSession, riskScore, summary);
         return new ScannerCompleteResponse(riskScore, detections.Count);
     }
+
+    // Identity enrichment, not a detection - deliberately kept out of IDetectionEngine, same
+    // reasoning that already keeps IAiSummaryService a separate step here. Best-effort: a
+    // failed/skipped lookup (no Steam Web API key configured, Steam wasn't running, the
+    // profile is private) never blocks scan completion - CompleteAsync's own SaveChangesAsync
+    // persists whatever gets set here alongside its own fields.
+    private async Task EnrichSteamIdentityAsync()
+    {
+        var result = await _scanSessions.GetLatestResultAsync(CurrentSession.Id, ScanResultType.Steam);
+        if (result is null) return;
+
+        var facts = Deserialize<SteamFact>(result.DataJson);
+        var steamId64 = facts.FirstOrDefault()?.SteamId64;
+        if (string.IsNullOrWhiteSpace(steamId64)) return;
+
+        CurrentSession.SteamId64 = steamId64;
+
+        var profile = await _steamProfiles.GetProfileAsync(steamId64);
+        CurrentSession.SteamUsername = profile.Username;
+        CurrentSession.SteamAvatarUrl = profile.AvatarUrl;
+    }
+
+    private static List<T> Deserialize<T>(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<T>>(json, JsonOptions) ?? new List<T>();
+        }
+        catch (JsonException)
+        {
+            return new List<T>();
+        }
+    }
+
+    private record SteamFact(string SteamId64);
 
     private ScanSession CurrentSession => (ScanSession)HttpContext.Items["ScanSession"]!;
 }

@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -6,8 +5,10 @@ namespace NexusGuard.Bot;
 
 public record CreateScanResult(Guid ScanId, string Pin, DateTime PinExpiresAt);
 
-// Talks to NexusGuard.Api the same way the dashboard does: X-Api-Key header, no different
-// treatment for being a bot instead of a browser.
+// Talks to NexusGuard.Api's bot-only endpoints (api/discord/*), authenticated by a single
+// shared secret instead of a per-server API key - the bot never holds or persists an API key
+// past the one /link call that validates it (see DiscordGuildLink's own comment on the API
+// side for why: a local file on Render's ephemeral filesystem isn't durable storage).
 public class ApiClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -17,28 +18,28 @@ public class ApiClient
 
     private readonly HttpClient _http;
 
-    public ApiClient(string baseUrl)
+    public ApiClient(string baseUrl, string botSecret)
     {
         _http = new HttpClient { BaseAddress = new Uri(baseUrl) };
+        _http.DefaultRequestHeaders.Add("X-Bot-Secret", botSecret);
     }
 
-    public async Task<bool> ValidateApiKeyAsync(string apiKey)
+    // Validates the API key server-side and durably links this guild to the server it
+    // belongs to - returns false if the key doesn't check out, true once linked.
+    public async Task<bool> LinkGuildAsync(string apiKey, ulong guildId)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/scans");
-        req.Headers.Add("X-Api-Key", apiKey);
-        var res = await _http.SendAsync(req);
+        var res = await _http.PostAsJsonAsync("/api/discord/link", new { apiKey, guildId }, JsonOptions);
         return res.IsSuccessStatusCode;
     }
 
-    public async Task<CreateScanResult> CreateScanAsync(string apiKey, string playerIdentifier)
+    public async Task<CreateScanResult> CreateScanAsync(
+        ulong guildId, string? playerIdentifier, ulong discordUserId, string discordUsername, string? discordAvatarUrl)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/scans")
-        {
-            Content = JsonContent.Create(new { playerIdentifier }, options: JsonOptions),
-        };
-        req.Headers.Add("X-Api-Key", apiKey);
+        var res = await _http.PostAsJsonAsync(
+            "/api/discord/scans",
+            new { guildId, playerIdentifier, discordUserId = discordUserId.ToString(), discordUsername, discordAvatarUrl },
+            JsonOptions);
 
-        var res = await _http.SendAsync(req);
         if (!res.IsSuccessStatusCode)
         {
             var body = await res.Content.ReadAsStringAsync();

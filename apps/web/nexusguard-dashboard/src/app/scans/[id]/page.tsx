@@ -9,6 +9,7 @@ import {
   type DetectionResponse,
   type ScanResultSummaryResponse,
   type ScanSessionDetailResponse,
+  type ScanSessionResponse,
 } from "@/lib/api";
 import { loadSession, type ServerSession } from "@/lib/session";
 import StatusBadge from "@/components/StatusBadge";
@@ -388,7 +389,10 @@ function OverviewSection({
           )}
         </div>
 
-        <div className="min-w-0 rounded-xl border border-zinc-800 p-4">
+        <div className="min-w-0 space-y-4">
+          <AccountsCard session={detail.session} />
+
+          <div className="rounded-xl border border-zinc-800 p-4">
           <h2 className="text-sm font-semibold text-zinc-200">Tarama Bilgileri</h2>
           <div className="mt-3 space-y-2.5 text-sm">
             <InfoRow label="PIN" value={pin ?? "—"} mono />
@@ -413,6 +417,7 @@ function OverviewSection({
             />
             <InfoRow label="Tarama Süresi" value={scanDuration !== null ? `${scanDuration}s` : "—"} />
             <InfoRow label="Tamamlandı" value={detail.session.completedAt ? formatDate(detail.session.completedAt) : "—"} />
+          </div>
           </div>
         </div>
       </div>
@@ -899,6 +904,70 @@ const CONFIDENCE_STYLES: Record<string, string> = {
   High: "border-orange-800 text-orange-400",
   Confirmed: "border-red-700 text-red-400",
 };
+
+// Shown only when the scan actually has an identity attached - most scans have neither (no
+// Discord bot involved, Steam wasn't running). Discord identity only ever comes from the admin
+// picking a member through Discord's own /nexusguard-scan command; Steam identity only ever
+// comes from the local Steam client's own registry key + its public Web API - neither is ever
+// scraped from the player's live session, see ScanSession's own comments on the API side.
+function AccountsCard({ session }: { session: ScanSessionResponse }) {
+  if (!session.discordUserId && !session.steamId64) return null;
+
+  return (
+    <div className="rounded-xl border border-zinc-800 p-4">
+      <h2 className="text-sm font-semibold text-zinc-200">Hesaplar</h2>
+      <div className="mt-3 space-y-3">
+        {session.discordUserId && (
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5865F2]/15 text-[#5865F2]">
+              <DiscordMark className="h-4 w-4" />
+            </span>
+            {session.discordAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={session.discordAvatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+            ) : null}
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-zinc-200">{session.discordUsername}</div>
+              <div className="truncate font-mono text-[11px] text-zinc-600">{session.discordUserId}</div>
+            </div>
+          </div>
+        )}
+
+        {session.steamId64 && (
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1b2838] text-[#66c0f4]">
+              <SteamMark className="h-4 w-4" />
+            </span>
+            {session.steamAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={session.steamAvatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+            ) : null}
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-zinc-200">{session.steamUsername ?? "—"}</div>
+              <div className="truncate font-mono text-[11px] text-zinc-600">{session.steamId64}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DiscordMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M20.3 4.9A19.8 19.8 0 0 0 15.6 3.4c-.2.4-.5.9-.6 1.3a18.3 18.3 0 0 0-5.5 0c-.2-.4-.4-.9-.6-1.3a19.7 19.7 0 0 0-4.7 1.5C1.7 8.9 1 12.8 1.3 16.6a19.9 19.9 0 0 0 6 3c.5-.6.9-1.3 1.3-2-.7-.3-1.4-.6-2-1.1l.5-.4a14.2 14.2 0 0 0 12 0l.4.4c-.6.4-1.3.8-2 1.1.4.7.8 1.4 1.3 2a19.8 19.8 0 0 0 6-3c.4-4.4-.7-8.3-2.9-11.7ZM9 14.6c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Zm6 0c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Z" />
+    </svg>
+  );
+}
+
+function SteamMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M12 2C6.9 2 2.7 5.9 2.1 10.8l5.3 2.2a2.8 2.8 0 0 1 1.6-.5l2.3-3.4v-.1a3.5 3.5 0 1 1 3.5 3.5h-.1l-3.3 2.4a2.8 2.8 0 0 1-5.5.8l-3.8-1.6C3 19.6 7.1 22 12 22a10 10 0 0 0 0-20Zm-2.7 15.2-1.2-.5a2.1 2.1 0 0 0 2.7 1.3 2.1 2.1 0 0 0 1.2-2.7 2.1 2.1 0 0 0-2.7-1.2l1.3.5a1.6 1.6 0 0 1-1.3 2.9Zm7.2-7.7a2.3 2.3 0 1 0 0-4.7 2.3 2.3 0 0 0 0 4.7Zm0-.8a1.6 1.6 0 1 1 0-3.1 1.6 1.6 0 0 1 0 3.1Z" />
+    </svg>
+  );
+}
 
 function DetectionConfidenceBadge({ confidence }: { confidence: string }) {
   const style = CONFIDENCE_STYLES[confidence] ?? CONFIDENCE_STYLES.Low;

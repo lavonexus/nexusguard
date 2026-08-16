@@ -413,8 +413,20 @@ export default function ScansPage() {
                     {copiedField === "link" ? "Kopyalandı" : "Paylaş"}
                   </button>
                 </div>
-                <div className="mt-1.5 truncate rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-2 font-mono text-[11px] text-zinc-400">
-                  {downloadLink}
+                <div className="mt-1.5 flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 py-1.5 pl-2.5 pr-1.5">
+                  <span
+                    title={downloadLink}
+                    className="min-w-0 flex-1 truncate font-mono text-xs text-zinc-300"
+                  >
+                    {downloadLink}
+                  </span>
+                  <button
+                    onClick={() => handleCopy("link", downloadLink)}
+                    title="Bağlantıyı kopyala"
+                    className="flex shrink-0 items-center justify-center rounded-md border border-zinc-700 px-2 py-1.5 text-xs text-zinc-300 transition-colors hover:border-violet-700 hover:text-violet-300"
+                  >
+                    <span aria-hidden>⧉</span>
+                  </button>
                 </div>
 
                 <button

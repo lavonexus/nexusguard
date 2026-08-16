@@ -17,7 +17,13 @@ public record ScanSessionResponse(
     string? AiSummary,
     DateTime CreatedAt,
     DateTime? StartedAt,
-    DateTime? CompletedAt);
+    DateTime? CompletedAt,
+    string? DiscordUserId,
+    string? DiscordUsername,
+    string? DiscordAvatarUrl,
+    string? SteamId64,
+    string? SteamUsername,
+    string? SteamAvatarUrl);
 
 public record ScanResultSummaryResponse(Guid Id, string ResultType, string DataJson, DateTime CreatedAt);
 

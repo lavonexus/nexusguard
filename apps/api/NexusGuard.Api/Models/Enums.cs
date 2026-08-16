@@ -28,5 +28,6 @@ public enum ScanResultType
     ScheduledTask,
     Service,
     InstalledApplication,
-    Firmware
+    Firmware,
+    Steam
 }

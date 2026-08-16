@@ -3,16 +3,21 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using NexusGuard.Bot;
 
+// AddEnvironmentVariables() last so it wins - user-secrets are for a dev machine only, Render
+// (production) supplies these as real environment variables (Discord__BotToken, etc, using
+// .NET's standard "__" section separator for env vars).
 var config = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
+    .AddEnvironmentVariables()
     .Build();
 
 var botToken = config["Discord:BotToken"]
-    ?? throw new InvalidOperationException("Discord:BotToken is not configured (set it via user-secrets).");
+    ?? throw new InvalidOperationException("Discord:BotToken is not configured (set it via user-secrets locally, or Discord__BotToken in production).");
+var botSharedSecret = config["Discord:BotSharedSecret"]
+    ?? throw new InvalidOperationException("Discord:BotSharedSecret is not configured - must match the API's own Discord__BotSharedSecret.");
 var apiBaseUrl = config["Api:BaseUrl"] ?? "http://localhost:5080";
 
-var api = new ApiClient(apiBaseUrl);
-var linkStore = new LinkStore();
+var api = new ApiClient(apiBaseUrl, botSharedSecret);
 
 var client = new DiscordSocketClient(new DiscordSocketConfig
 {
@@ -85,13 +90,12 @@ async Task HandleLinkAsync(SocketSlashCommand command)
 
     var apiKey = (string)command.Data.Options.First(o => o.Name == "api-key").Value;
 
-    if (!await api.ValidateApiKeyAsync(apiKey))
+    if (!await api.LinkGuildAsync(apiKey, command.GuildId!.Value))
     {
         await command.FollowupAsync("That API key doesn't look valid - check it and try again.", ephemeral: true);
         return;
     }
 
-    linkStore.SetApiKey(command.GuildId!.Value, apiKey);
     await command.FollowupAsync("Linked. You can now use `/nexusguard-scan` in this server.", ephemeral: true);
 }
 
@@ -106,20 +110,20 @@ async Task HandleScanAsync(SocketSlashCommand command)
         return;
     }
 
-    var apiKey = linkStore.GetApiKey(guildId.Value);
-    if (apiKey is null)
-    {
-        await command.FollowupAsync(
-            "This server isn't linked yet - an admin needs to run `/nexusguard-link` first.", ephemeral: true);
-        return;
-    }
-
     var targetUser = (SocketUser)command.Data.Options.First(o => o.Name == "player").Value;
 
     CreateScanResult scan;
     try
     {
-        scan = await api.CreateScanAsync(apiKey, targetUser.Username);
+        scan = await api.CreateScanAsync(
+            guildId.Value, targetUser.Username, targetUser.Id, targetUser.Username,
+            targetUser.GetDisplayAvatarUrl() ?? targetUser.GetDefaultAvatarUrl());
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("isn't linked yet"))
+    {
+        await command.FollowupAsync(
+            "This server isn't linked yet - an admin needs to run `/nexusguard-link` first.", ephemeral: true);
+        return;
     }
     catch (Exception ex)
     {

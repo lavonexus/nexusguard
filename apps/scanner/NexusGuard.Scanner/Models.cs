@@ -89,5 +89,10 @@ public record FirmwareFact(
 
 public record FirmwareBootEntry(string Identifier, string? Description, string? Path);
 
+// A bare SteamID64 read from the local Steam client's own registry key - see SteamScanner's
+// own comment for why this isn't a sensitive token. The server resolves it to a display name/
+// avatar via Steam's public Web API; the scanner never does that lookup itself.
+public record SteamFact(string SteamId64);
+
 // Drives the GUI progress bar - percent complete plus a short human-readable status line.
 public record ScanProgress(int Percent, string Status);

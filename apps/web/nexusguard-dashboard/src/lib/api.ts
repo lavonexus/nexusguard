@@ -115,6 +115,16 @@ export interface ScanSessionResponse {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  // Set only when the scan was started via the Discord bot's /nexusguard-scan command - the
+  // admin picked this member through Discord's own UI, never read from the player's machine.
+  discordUserId: string | null;
+  discordUsername: string | null;
+  discordAvatarUrl: string | null;
+  // Set when Scanner.exe found a currently-active Steam account (see SteamScanner) and the
+  // server resolved it via Steam's public Web API.
+  steamId64: string | null;
+  steamUsername: string | null;
+  steamAvatarUrl: string | null;
 }
 
 export interface ScanResultSummaryResponse {

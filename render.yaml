@@ -55,6 +55,29 @@ services:
         sync: false
       - key: Anthropic__ApiKey
         sync: false
+      # Must be the same literal value entered here and on nexusguard-bot's Discord__BotSharedSecret -
+      # authenticates the bot's own endpoints (api/discord/*) instead of a per-server API key.
+      - key: Discord__BotSharedSecret
+        sync: false
+      # Free key from steamcommunity.com/dev/apikey - used to resolve a SteamID64 the scanner
+      # already read from the local Steam client's own registry key into a public display name/
+      # avatar. Optional: if unset, Steam identity is simply never attached to a scan.
+      - key: Steam__ApiKey
+        sync: false
+
+  - type: worker
+    name: nexusguard-bot
+    runtime: docker
+    dockerfilePath: ./apps/bot/NexusGuard.Bot/Dockerfile
+    dockerContext: ./apps/bot/NexusGuard.Bot
+    plan: free
+    envVars:
+      - key: Api__BaseUrl
+        value: https://api.nexusscanner.com
+      - key: Discord__BotToken
+        sync: false
+      - key: Discord__BotSharedSecret
+        sync: false
 
   - type: web
     name: nexusguard-web

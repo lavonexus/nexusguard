@@ -18,6 +18,7 @@ public class NexusGuardDbContext : DbContext
     public DbSet<SavedToolDesign> SavedToolDesigns => Set<SavedToolDesign>();
     public DbSet<MarketplaceListing> MarketplaceListings => Set<MarketplaceListing>();
     public DbSet<MarketplaceReview> MarketplaceReviews => Set<MarketplaceReview>();
+    public DbSet<DiscordGuildLink> DiscordGuildLinks => Set<DiscordGuildLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +71,12 @@ public class NexusGuardDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(s => s.CreatedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            e.Property(s => s.DiscordUserId).HasMaxLength(32);
+            e.Property(s => s.DiscordUsername).HasMaxLength(64);
+            e.Property(s => s.DiscordAvatarUrl).HasMaxLength(512);
+            e.Property(s => s.SteamId64).HasMaxLength(32);
+            e.Property(s => s.SteamUsername).HasMaxLength(64);
+            e.Property(s => s.SteamAvatarUrl).HasMaxLength(512);
         });
 
         modelBuilder.Entity<ScanResult>(e =>
@@ -148,6 +155,15 @@ public class NexusGuardDbContext : DbContext
             e.HasOne(r => r.Reviewer)
                 .WithMany()
                 .HasForeignKey(r => r.ReviewerUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DiscordGuildLink>(e =>
+        {
+            e.HasKey(l => l.GuildId);
+            e.HasOne(l => l.Server)
+                .WithMany()
+                .HasForeignKey(l => l.ServerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

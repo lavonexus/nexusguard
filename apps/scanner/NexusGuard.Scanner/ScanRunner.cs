@@ -88,6 +88,13 @@ public static class ScanRunner
         var firmwareFact = FirmwareScanner.Scan();
         await Report(api, scanToken, "Firmware", new[] { firmwareFact });
 
+        progress.Report(new ScanProgress(44, "Checking Steam account..."));
+        var steamFact = SteamScanner.Scan();
+        if (steamFact is not null)
+        {
+            await Report(api, scanToken, "Steam", new[] { steamFact });
+        }
+
         progress.Report(new ScanProgress(45, "Scanning FiveM, GTA V, and Windows user directories..."));
         var extendedFacts = ExtendedFileScanner.Scan();
         if (extendedFacts.Count > 0)

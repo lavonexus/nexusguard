@@ -20,7 +20,8 @@ public class ScanSessionService : IScanSessionService
     }
 
     public async Task<(ScanSession Session, string Pin)> CreateAsync(
-        Guid serverId, string? playerIdentifier, Guid? createdByUserId, CancellationToken ct = default)
+        Guid serverId, string? playerIdentifier, Guid? createdByUserId, CancellationToken ct = default,
+        string? discordUserId = null, string? discordUsername = null, string? discordAvatarUrl = null)
     {
         var pin = _tokens.GeneratePin();
 
@@ -35,7 +36,10 @@ public class ScanSessionService : IScanSessionService
             Status = ScanSessionStatus.Pending,
             PinHash = _tokens.Hash(pin),
             PinExpiresAt = DateTime.UtcNow.AddMinutes(_pinTtlMinutes),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            DiscordUserId = discordUserId,
+            DiscordUsername = discordUsername,
+            DiscordAvatarUrl = discordAvatarUrl,
         };
 
         _db.ScanSessions.Add(session);
@@ -166,4 +170,10 @@ public class ScanSessionService : IScanSessionService
 
         await _db.SaveChangesAsync(ct);
     }
+
+    public async Task<ScanResult?> GetLatestResultAsync(Guid sessionId, ScanResultType type, CancellationToken ct = default) =>
+        await _db.ScanResults
+            .Where(r => r.ScanSessionId == sessionId && r.ResultType == type)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync(ct);
 }

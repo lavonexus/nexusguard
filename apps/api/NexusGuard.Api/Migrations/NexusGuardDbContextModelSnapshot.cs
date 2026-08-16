@@ -95,6 +95,27 @@ namespace NexusGuard.Api.Migrations
                     b.ToTable("Detections");
                 });
 
+            modelBuilder.Entity("NexusGuard.Api.Models.DiscordGuildLink", b =>
+                {
+                    b.Property<long>("GuildId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("GuildId"));
+
+                    b.Property<DateTime>("LinkedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("GuildId");
+
+                    b.HasIndex("ServerId");
+
+                    b.ToTable("DiscordGuildLinks");
+                });
+
             modelBuilder.Entity("NexusGuard.Api.Models.MarketplaceListing", b =>
                 {
                     b.Property<Guid>("Id")
@@ -236,6 +257,18 @@ namespace NexusGuard.Api.Migrations
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DiscordAvatarUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("DiscordUserId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("DiscordUsername")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<DateTime?>("LastHeartbeatAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -273,6 +306,18 @@ namespace NexusGuard.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SteamAvatarUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SteamId64")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SteamUsername")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
 
@@ -536,6 +581,17 @@ namespace NexusGuard.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("ScanSession");
+                });
+
+            modelBuilder.Entity("NexusGuard.Api.Models.DiscordGuildLink", b =>
+                {
+                    b.HasOne("NexusGuard.Api.Models.Server", "Server")
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
                 });
 
             modelBuilder.Entity("NexusGuard.Api.Models.MarketplaceListing", b =>

@@ -113,5 +113,6 @@ public class ScansController : ControllerBase
         Guid.Parse(User.FindFirst(ApiKeyClaimTypes.ServerId)!.Value);
 
     private static ScanSessionResponse ToResponse(ScanSession s) => new(
-        s.Id, s.PlayerIdentifier, s.Status.ToString(), s.RiskScore, s.AiSummary, s.CreatedAt, s.StartedAt, s.CompletedAt);
+        s.Id, s.PlayerIdentifier, s.Status.ToString(), s.RiskScore, s.AiSummary, s.CreatedAt, s.StartedAt, s.CompletedAt,
+        s.DiscordUserId, s.DiscordUsername, s.DiscordAvatarUrl, s.SteamId64, s.SteamUsername, s.SteamAvatarUrl);
 }
