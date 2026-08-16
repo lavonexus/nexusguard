@@ -221,7 +221,14 @@ public partial class MainWindow : Window
         {
             try
             {
-                var bytes = Convert.FromBase64String(theme.LogoBase64);
+                // theme.LogoBase64 is a full data URL ("data:image/png;base64,AAAA...") - the
+                // dashboard's upload widget builds it with FileReader.readAsDataURL and the API
+                // stores/returns it unchanged. BitmapImage can only decode raster formats
+                // (PNG/JPEG), not the SVG the Tool Designer also accepts, so an SVG upload
+                // falls through to the catch below and keeps the default vector shield instead
+                // of failing scan startup over a cosmetic asset.
+                var base64Payload = theme.LogoBase64[(theme.LogoBase64.IndexOf(',') + 1)..];
+                var bytes = Convert.FromBase64String(base64Payload);
                 var bitmap = new BitmapImage();
                 using var stream = new MemoryStream(bytes);
                 bitmap.BeginInit();
