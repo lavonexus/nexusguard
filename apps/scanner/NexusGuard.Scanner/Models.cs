@@ -94,5 +94,15 @@ public record FirmwareBootEntry(string Identifier, string? Description, string? 
 // avatar via Steam's public Web API; the scanner never does that lookup itself.
 public record SteamFact(string SteamId64);
 
+// AppCompatCache ("Shimcache") entries - Windows' own record of executables it has evaluated
+// for compatibility, which can retain evidence of a file that ran and was later deleted long
+// after Prefetch/recent-files evidence has rotated out. Readable without elevation (unlike
+// Amcache.hve and the Prefetch folder, both admin-only - see ShimcacheScanner for why those
+// two are deliberately not read here). LastModifiedUtc is the *file's own* last-write time as
+// Windows recorded it at cache-insertion time, not a "last executed at" timestamp - Shimcache
+// proves the file was present and inspected by Windows, not that it was run. Informational,
+// not scored, same treatment as UsbDeviceFact/FirmwareFact.
+public record ShimcacheFact(string Path, DateTime LastModifiedUtc);
+
 // Drives the GUI progress bar - percent complete plus a short human-readable status line.
 public record ScanProgress(int Percent, string Status);

@@ -95,6 +95,13 @@ public static class ScanRunner
             await Report(api, scanToken, "Steam", new[] { steamFact });
         }
 
+        progress.Report(new ScanProgress(45, "Reading Windows compatibility cache..."));
+        var shimcacheFacts = ShimcacheScanner.Scan();
+        if (shimcacheFacts.Count > 0)
+        {
+            await Report(api, scanToken, "Shimcache", shimcacheFacts);
+        }
+
         progress.Report(new ScanProgress(45, "Scanning FiveM, GTA V, and Windows user directories..."));
         var extendedFacts = ExtendedFileScanner.Scan();
         if (extendedFacts.Count > 0)

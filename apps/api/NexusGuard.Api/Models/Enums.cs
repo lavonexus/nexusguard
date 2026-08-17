@@ -29,7 +29,8 @@ public enum ScanResultType
     Service,
     InstalledApplication,
     Firmware,
-    Steam
+    Steam,
+    Shimcache
 }
 
 public enum SupportTicketStatus
