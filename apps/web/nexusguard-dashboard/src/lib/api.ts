@@ -8,18 +8,34 @@ export class ApiError extends Error {
   }
 }
 
+// A stalled connection (a dropped packet, an intermediary proxy sitting on an idle socket, or
+// this catching Render's free-tier cold start at just the wrong moment) previously hung here
+// forever - fetch() has no default timeout, so a caller's "creating"/"loading" state had no way
+// to ever recover short of a full page reload. 20s comfortably covers a real cold start; past
+// that, surfacing a retryable error beats leaving the UI stuck indefinitely with no recourse.
+const REQUEST_TIMEOUT_MS = 20000;
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    // Always ride along with the dashboard session cookie, even on API-key calls - the API
-    // uses it opportunistically (e.g. to attribute a created scan to whoever is logged in
-    // for the "who scans the most" leaderboard) without requiring it.
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      // Always ride along with the dashboard session cookie, even on API-key calls - the API
+      // uses it opportunistically (e.g. to attribute a created scan to whoever is logged in
+      // for the "who scans the most" leaderboard) without requiring it.
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      signal: options.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new ApiError(0, "Request timed out.");
+    }
+    throw err;
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
