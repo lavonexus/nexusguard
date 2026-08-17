@@ -43,7 +43,15 @@ public static class ExtendedFileScanner
 
             foreach (var path in DirectoryWalker.Walk(root, extensions, maxDepth, cap))
             {
-                facts.Add(BuildFact(path, category));
+                try
+                {
+                    facts.Add(BuildFact(path, category));
+                }
+                catch
+                {
+                    // One file's metadata (hash/signature) failing shouldn't cost every other
+                    // file in this sweep - up to 1500 files pass through here per scan.
+                }
                 budget--;
                 if (budget <= 0) return;
             }

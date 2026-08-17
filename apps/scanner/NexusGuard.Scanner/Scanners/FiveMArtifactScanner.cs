@@ -21,15 +21,27 @@ public static class FiveMArtifactScanner
         var pluginsDir = Path.Combine(FiveMDataDirectory, "plugins");
         foreach (var file in SafeEnumerate(pluginsDir, "*.dll"))
         {
-            facts.Add(BuildFact(file, inPluginsDir: true));
+            TryAddFact(facts, file, inPluginsDir: true);
         }
 
         foreach (var file in SafeEnumerate(FiveMDataDirectory, "*", SearchOption.TopDirectoryOnly))
         {
-            facts.Add(BuildFact(file, inPluginsDir: false));
+            TryAddFact(facts, file, inPluginsDir: false);
         }
 
         return facts;
+    }
+
+    private static void TryAddFact(List<FiveMArtifactFact> facts, string file, bool inPluginsDir)
+    {
+        try
+        {
+            facts.Add(BuildFact(file, inPluginsDir));
+        }
+        catch
+        {
+            // One file's metadata (hash/signature) failing shouldn't cost the whole scan.
+        }
     }
 
     private static FiveMArtifactFact BuildFact(string file, bool inPluginsDir)

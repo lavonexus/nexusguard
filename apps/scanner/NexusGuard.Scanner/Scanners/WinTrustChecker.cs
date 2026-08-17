@@ -30,6 +30,15 @@ public static class WinTrustChecker
     private const uint WTD_STATEACTION_VERIFY = 1;
     private const uint WTD_STATEACTION_CLOSE = 2;
     private const uint WTD_SAFER_FLAG = 0x100;
+    // Revocation status still gets checked (WTD_REVOKE_WHOLECHAIN above), but only against
+    // whatever CRL/OCSP data is already cached locally - never a fresh network fetch. Added
+    // after real users reported scans hanging/erroring mid-run: without this, a slow or
+    // firewalled connection to Microsoft's CRL/OCSP endpoints could block a single file's
+    // check for a long, unbounded time, and this call now runs on every process/driver/file
+    // touched by the broader scan (dozens to hundreds per run) - any one of them stalling was
+    // enough to sink the whole scan. This keeps revoked-certificate detection for anything
+    // already in the local cache while removing the network dependency entirely.
+    private const uint WTD_CACHE_ONLY_URL_RETRIEVAL = 0x1000;
 
     private const int ERROR_SUCCESS = 0;
     private static readonly int TRUST_E_NOSIGNATURE = unchecked((int)0x800B0100);
@@ -78,17 +87,36 @@ public static class WinTrustChecker
         public uint StateAction = WTD_STATEACTION_VERIFY;
         public IntPtr StateData = IntPtr.Zero;
         public IntPtr URLReference = IntPtr.Zero;
-        public uint ProvFlags = WTD_SAFER_FLAG;
+        public uint ProvFlags = WTD_SAFER_FLAG | WTD_CACHE_ONLY_URL_RETRIEVAL;
         public uint UIContext = 0;
     }
 
     [DllImport("wintrust.dll", ExactSpelling = true, CharSet = CharSet.Unicode)]
     private static extern int WinVerifyTrust(IntPtr hwnd, [MarshalAs(UnmanagedType.LPStruct)] Guid pgActionID, [In] WinTrustDataNative pWVTData);
 
-    // Never throws and never blocks the rest of a scan - an unreadable/deleted/locked file, a
-    // locked-down environment, or a network hiccup on the revocation check all resolve to
-    // Unknown rather than failing the caller.
+    private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(5);
+
+    // Never throws and never blocks the rest of a scan longer than CallTimeout - an unreadable/
+    // deleted/locked file, a locked-down environment, or (despite WTD_CACHE_ONLY_URL_RETRIEVAL
+    // above) some other unexpected stall all resolve to Unknown rather than hanging the caller.
+    // Runs on a background thread specifically so a timeout here can give up WAITING without
+    // touching the native call still in flight - VerifySync owns its own alloc/free lifecycle
+    // start to finish, so an abandoned call still cleans up itself whenever it does return
+    // instead of racing the timing-out caller for the same buffer.
     public static SignatureTrust Verify(string filePath)
+    {
+        try
+        {
+            var task = Task.Run(() => VerifySync(filePath));
+            return task.Wait(CallTimeout) ? task.Result : SignatureTrust.Unknown;
+        }
+        catch
+        {
+            return SignatureTrust.Unknown;
+        }
+    }
+
+    private static SignatureTrust VerifySync(string filePath)
     {
         WinTrustFileInfo? fileInfo = null;
         var fileInfoPtr = IntPtr.Zero;
