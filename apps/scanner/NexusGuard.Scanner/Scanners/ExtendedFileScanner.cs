@@ -101,6 +101,6 @@ public static class ExtendedFileScanner
 
         return new FileEvidenceFact(
             Path.GetFileName(path), path, category, size, meta.Sha256,
-            meta.Signed, meta.Publisher, meta.CreatedUtc, meta.ModifiedUtc, entries);
+            meta.Signed, meta.Publisher, meta.CreatedUtc, meta.ModifiedUtc, entries, meta.SignatureTrust);
     }
 }

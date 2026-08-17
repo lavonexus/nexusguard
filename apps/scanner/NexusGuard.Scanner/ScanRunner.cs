@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using NexusGuard.Scanner.Scanners;
 
 namespace NexusGuard.Scanner;
@@ -12,6 +13,9 @@ public static class ScanRunner
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        // Without this, DriverFact/ProcessFact/FileEvidenceFact's SignatureTrust enum would
+        // serialize as a bare integer - unreadable in the admin panel's raw-results dump.
+        Converters = { new JsonStringEnumConverter() },
     };
 
     public static async Task<CompleteResponse> RunAsync(
@@ -75,6 +79,13 @@ public static class ScanRunner
         if (serviceFacts.Count > 0)
         {
             await Report(api, scanToken, "Service", serviceFacts);
+        }
+
+        progress.Report(new ScanProgress(41, "Checking kernel-mode drivers..."));
+        var driverFacts = DriverScanner.Scan();
+        if (driverFacts.Count > 0)
+        {
+            await Report(api, scanToken, "Driver", driverFacts);
         }
 
         progress.Report(new ScanProgress(43, "Checking installed application history..."));

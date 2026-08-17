@@ -4,7 +4,9 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace NexusGuard.Scanner.Scanners;
 
-public record FileMetadata(string Sha256, bool Signed, string? Publisher, DateTime? CreatedUtc, DateTime? ModifiedUtc);
+public record FileMetadata(
+    string Sha256, bool Signed, string? Publisher, DateTime? CreatedUtc, DateTime? ModifiedUtc,
+    WinTrustChecker.SignatureTrust? SignatureTrust);
 
 // Shared by every scanner that reports on individual files (extended file scan, process
 // executables, ...). Reads only what's needed to describe a file - hash, Authenticode signer
@@ -15,6 +17,8 @@ public record FileMetadata(string Sha256, bool Signed, string? Publisher, DateTi
 public static class FileMetadataInspector
 {
     private const long MaxHashBytes = 100 * 1024 * 1024;
+    private static readonly string WindowsDir =
+        Environment.GetFolderPath(Environment.SpecialFolder.Windows) + Path.DirectorySeparatorChar;
 
     public static FileMetadata Inspect(string path)
     {
@@ -23,6 +27,7 @@ public static class FileMetadataInspector
         string? publisher = null;
         DateTime? createdUtc = null;
         DateTime? modifiedUtc = null;
+        WinTrustChecker.SignatureTrust? signatureTrust = null;
 
         try
         {
@@ -55,6 +60,23 @@ public static class FileMetadataInspector
             // extremely common and not inherently suspicious (most user tools are unsigned).
         }
 
-        return new FileMetadata(sha256, signed, publisher, createdUtc, modifiedUtc);
+        // WinTrustChecker only sees embedded Authenticode signatures, not the separate
+        // catalog-signing mechanism most core Windows binaries actually use (confirmed
+        // empirically: notepad.exe/getmac.exe are catalog-signed, not embedded) - running it
+        // against anything under the Windows directory would misreport those as unsigned, so
+        // it's deliberately left null there rather than guessed at.
+        if (!path.StartsWith(WindowsDir, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                signatureTrust = WinTrustChecker.Verify(path);
+            }
+            catch
+            {
+                // Never let a signature-trust check fail the whole metadata read.
+            }
+        }
+
+        return new FileMetadata(sha256, signed, publisher, createdUtc, modifiedUtc, signatureTrust);
     }
 }

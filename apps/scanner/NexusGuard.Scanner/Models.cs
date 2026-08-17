@@ -28,7 +28,8 @@ public record CompleteResponse(int RiskScore, int DetectionCount);
 // letting the server's Detection Engine decide is the whole point of this architecture.
 public record ProcessFact(
     string Name, int Pid, string? Path, string? Sha256,
-    bool Signed, string? Publisher, string? ParentProcessName);
+    bool Signed, string? Publisher, string? ParentProcessName,
+    NexusGuard.Scanner.Scanners.WinTrustChecker.SignatureTrust? SignatureTrust);
 public record ModuleFact(string Name, string Path, bool UnderGameDir, bool UnderSystemDir);
 public record FileFact(string Name, string Path);
 public record FiveMArtifactFact(string Name, string Path, bool InPluginsDir);
@@ -42,7 +43,8 @@ public record HashFact(string Name, string Path, string Sha256);
 public record FileEvidenceFact(
     string Name, string Path, string Category, long SizeBytes, string Sha256,
     bool Signed, string? Publisher, DateTime? CreatedUtc, DateTime? ModifiedUtc,
-    List<string> ArchiveEntries);
+    List<string> ArchiveEntries,
+    NexusGuard.Scanner.Scanners.WinTrustChecker.SignatureTrust? SignatureTrust);
 
 // Autostart entries - Run/RunOnce registry keys plus the Startup shell folders.
 public record AutostartFact(string Name, string Command, string Source);
@@ -50,8 +52,19 @@ public record AutostartFact(string Name, string Command, string Source);
 // Windows Task Scheduler tasks whose action runs an executable.
 public record ScheduledTaskFact(string TaskName, string Command, bool Enabled);
 
-// Windows services backed by a .exe/.sys binary.
+// Windows services backed by a .exe/.sys binary. Note: ServiceController.GetServices() (used
+// by ServiceScanner) only returns Win32 services - .NET's API deliberately excludes
+// kernel-mode and file-system drivers, which is exactly why DriverScanner exists separately.
 public record ServiceFact(string Name, string DisplayName, string Status, string? BinaryPath);
+
+// Currently loaded kernel-mode/file-system drivers (Win32_SystemDriver via WMI) - the one
+// category Windows itself refuses to load unsigned on x64 without Test Mode or a disabled
+// Secure Boot, which makes SignatureTrust here a much stronger signal than on an ordinary
+// user-mode exe. Still reported as a raw fact, not scored - see ShimcacheFact for why.
+public record DriverFact(
+    string Name, string DisplayName, string State, string? PathName, string? Sha256,
+    bool Signed, string? Publisher,
+    NexusGuard.Scanner.Scanners.WinTrustChecker.SignatureTrust? SignatureTrust);
 
 // RPF (RAGE Package File) archives found under FiveM's cache/mods folders - raw facts only.
 // Entries is the archive's own internal name list (files/folders packed inside it, read by

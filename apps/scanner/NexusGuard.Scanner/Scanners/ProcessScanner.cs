@@ -47,6 +47,7 @@ public static class ProcessScanner
             string? sha256 = null;
             bool signed = false;
             string? publisher = null;
+            WinTrustChecker.SignatureTrust? signatureTrust = null;
 
             if (!string.IsNullOrWhiteSpace(row.Path))
             {
@@ -56,6 +57,7 @@ public static class ProcessScanner
                     sha256 = meta.Sha256.Length > 0 ? meta.Sha256 : null;
                     signed = meta.Signed;
                     publisher = meta.Publisher;
+                    signatureTrust = meta.SignatureTrust;
                 }
                 catch
                 {
@@ -65,7 +67,7 @@ public static class ProcessScanner
 
             pidToName.TryGetValue(row.ParentPid, out var parentName);
 
-            facts.Add(new ProcessFact(row.Name, (int)row.Pid, row.Path, sha256, signed, publisher, parentName));
+            facts.Add(new ProcessFact(row.Name, (int)row.Pid, row.Path, sha256, signed, publisher, parentName, signatureTrust));
         }
 
         return facts;
