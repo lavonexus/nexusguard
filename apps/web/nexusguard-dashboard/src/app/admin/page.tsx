@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   ApiError,
+  adminAddMember,
   adminCancelPlan,
   adminDeleteMarketplaceListing,
   adminDeleteMarketplaceReview,
+  adminRemoveMember,
   adminSetPlan,
   deleteAdminScan,
   getMarketplaceListing,
   listAdminScans,
+  listAdminServerMembers,
   listAdminServers,
   listAdminUsers,
   listMarketplaceListings,
@@ -22,6 +25,7 @@ import {
   type MarketplaceListingSummaryResponse,
   type MarketplaceReviewResponse,
   type Plan,
+  type ServerMemberResponse,
 } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
 import StatusBadge from "@/components/StatusBadge";
@@ -65,6 +69,17 @@ const STRINGS: Dict<{
   colPlan: string;
   colMembers: string;
   colEnds: string;
+  manageMembers: string;
+  hideMembers: string;
+  membersLoading: string;
+  noMembers: string;
+  addMemberPlaceholder: string;
+  addMemberButton: string;
+  adding: string;
+  removeMemberButton: string;
+  ownerLabel: string;
+  managerLabel: string;
+  memberLabel: string;
   userSearchPlaceholder: string;
   colUser: string;
   colEmail: string;
@@ -147,6 +162,17 @@ const STRINGS: Dict<{
     colPlan: "Plan",
     colMembers: "Üye",
     colEnds: "Bitiş",
+    manageMembers: "Üyeler",
+    hideMembers: "Üyeleri gizle",
+    membersLoading: "Üyeler yükleniyor...",
+    noMembers: "Henüz üye yok.",
+    addMemberPlaceholder: "Discord kullanıcı adı, Discord ID ya da Google e-postası",
+    addMemberButton: "Ekle",
+    adding: "Ekleniyor...",
+    removeMemberButton: "Kaldır",
+    ownerLabel: "Sahip",
+    managerLabel: "Yönetici",
+    memberLabel: "Üye",
     userSearchPlaceholder: "Kullanıcı adı ya da e-posta ile ara",
     colUser: "Kullanıcı",
     colEmail: "E-posta",
@@ -230,6 +256,17 @@ const STRINGS: Dict<{
     colPlan: "Plan",
     colMembers: "Members",
     colEnds: "Ends",
+    manageMembers: "Members",
+    hideMembers: "Hide members",
+    membersLoading: "Loading members...",
+    noMembers: "No members yet.",
+    addMemberPlaceholder: "Discord username, Discord ID, or Google email",
+    addMemberButton: "Add",
+    adding: "Adding...",
+    removeMemberButton: "Remove",
+    ownerLabel: "Owner",
+    managerLabel: "Manager",
+    memberLabel: "Member",
     userSearchPlaceholder: "Search by username or email",
     colUser: "User",
     colEmail: "Email",
@@ -374,6 +411,7 @@ function ServersTab({ t, locale }: { t: T; locale: Locale }) {
   const [servers, setServers] = useState<AdminServerResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [membersOpenId, setMembersOpenId] = useState<string | null>(null);
 
   const load = useCallback(
     (q?: string) => {
@@ -447,6 +485,13 @@ function ServersTab({ t, locale }: { t: T; locale: Locale }) {
                   setServers((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? null);
                   setEditingId(null);
                 }}
+                membersOpen={membersOpenId === s.id}
+                onToggleMembers={() => setMembersOpenId((prev) => (prev === s.id ? null : s.id))}
+                onMemberCountChanged={(delta) => {
+                  setServers((prev) =>
+                    prev?.map((x) => (x.id === s.id ? { ...x, memberCount: x.memberCount + delta } : x)) ?? null
+                  );
+                }}
                 t={t}
                 locale={locale}
               />
@@ -464,6 +509,9 @@ function ServerRow({
   onEdit,
   onCancel,
   onSaved,
+  membersOpen,
+  onToggleMembers,
+  onMemberCountChanged,
   t,
   locale,
 }: {
@@ -472,6 +520,9 @@ function ServerRow({
   onEdit: () => void;
   onCancel: () => void;
   onSaved: (s: AdminServerResponse) => void;
+  membersOpen: boolean;
+  onToggleMembers: () => void;
+  onMemberCountChanged: (delta: number) => void;
   t: T;
   locale: Locale;
 }) {
@@ -510,8 +561,7 @@ function ServerRow({
     }
   }
 
-  if (!editing) {
-    return (
+  const row = !editing ? (
       <tr>
         <td className="px-4 py-2.5 font-medium text-zinc-200">
           {server.plan === "Enterprise" ? (
@@ -549,6 +599,16 @@ function ServerRow({
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5">
+              {server.plan === "Enterprise" && (
+                <button
+                  onClick={onToggleMembers}
+                  className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                    membersOpen ? "border-violet-700 text-violet-300" : "border-zinc-700 text-zinc-300 hover:border-violet-700 hover:text-violet-300"
+                  }`}
+                >
+                  {membersOpen ? t.hideMembers : t.manageMembers}
+                </button>
+              )}
               {server.plan !== "Free" && (
                 <button
                   onClick={() => setConfirmingCancel(true)}
@@ -568,10 +628,7 @@ function ServerRow({
           {error && <div className="mt-1 text-xs text-red-400">{error}</div>}
         </td>
       </tr>
-    );
-  }
-
-  return (
+  ) : (
     <tr>
       <td colSpan={6} className="bg-zinc-900/60 px-4 py-4">
         <div className="flex flex-wrap items-end gap-4">
@@ -646,6 +703,120 @@ function ServerRow({
         {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
       </td>
     </tr>
+  );
+
+  return (
+    <>
+      {row}
+      {membersOpen && server.plan === "Enterprise" && (
+        <tr>
+          <td colSpan={6} className="border-t border-zinc-800 bg-zinc-950/60 px-4 py-4">
+            <AdminMembersPanel server={server} t={t} locale={locale} onMemberCountChanged={onMemberCountChanged} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function AdminMembersPanel({
+  server,
+  t,
+  locale,
+  onMemberCountChanged,
+}: {
+  server: AdminServerResponse;
+  t: T;
+  locale: Locale;
+  onMemberCountChanged: (delta: number) => void;
+}) {
+  const [members, setMembers] = useState<ServerMemberResponse[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [identifier, setIdentifier] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const load = useCallback(() => {
+    listAdminServerMembers(server.id)
+      .then(setMembers)
+      .catch((err) => setError(err instanceof ApiError ? err.message : t.apiUnreachable));
+  }, [server.id, t.apiUnreachable]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!identifier.trim()) return;
+    setAdding(true);
+    setError(null);
+    try {
+      await adminAddMember(server.id, identifier.trim());
+      setIdentifier("");
+      load();
+      onMemberCountChanged(1);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleRemove(memberId: string) {
+    try {
+      await adminRemoveMember(server.id, memberId);
+      load();
+      onMemberCountChanged(-1);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
+    }
+  }
+
+  const roleLabel = (role: string) => (role === "Owner" ? t.ownerLabel : role === "Manager" ? t.managerLabel : t.memberLabel);
+  const dateFmt = locale === "en" ? "en-US" : "tr-TR";
+
+  return (
+    <div>
+      <form onSubmit={handleAdd} className="flex gap-2">
+        <input
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          placeholder={t.addMemberPlaceholder}
+          className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm outline-none focus:border-violet-600"
+        />
+        <button
+          type="submit"
+          disabled={adding}
+          className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+        >
+          {adding ? t.adding : t.addMemberButton}
+        </button>
+      </form>
+
+      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+
+      <div className="mt-3 space-y-1">
+        {members === null && <p className="text-xs text-zinc-500">{t.membersLoading}</p>}
+        {members?.length === 0 && <p className="text-xs text-zinc-500">{t.noMembers}</p>}
+        {members?.map((m) => (
+          <div key={m.id} className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-zinc-200">{m.username}</span>
+              <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-400">{roleLabel(m.role)}</span>
+              <span className="text-xs text-zinc-600">{new Date(m.addedAt).toLocaleDateString(dateFmt)}</span>
+            </div>
+            {m.role !== "Owner" && (
+              <button
+                onClick={() => handleRemove(m.id)}
+                className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
+              >
+                {t.removeMemberButton}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

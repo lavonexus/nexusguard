@@ -19,7 +19,7 @@ namespace NexusGuard.Api.Controllers;
 public class AdminController : ControllerBase
 {
     private static readonly string[] ValidPlans = ["Free", "Pro", "ProDuo", "Enterprise"];
-    private static readonly int[] ValidEnterpriseSeats = [5, 10, 15];
+    private const int MinEnterpriseSeats = 5; // matches the flexible 5+ Enterprise pricing on /pricing
 
     private readonly NexusGuardDbContext _db;
 
@@ -115,8 +115,8 @@ public class AdminController : ControllerBase
         if (!ValidPlans.Contains(request.Plan))
             return BadRequest($"Plan must be one of: {string.Join(", ", ValidPlans)}.");
 
-        if (request.Plan == "Enterprise" && (request.EnterpriseSeats is null || !ValidEnterpriseSeats.Contains(request.EnterpriseSeats.Value)))
-            return BadRequest($"Enterprise plans require EnterpriseSeats to be one of: {string.Join(", ", ValidEnterpriseSeats)}.");
+        if (request.Plan == "Enterprise" && (request.EnterpriseSeats is null || request.EnterpriseSeats.Value < MinEnterpriseSeats))
+            return BadRequest($"Enterprise plans require at least {MinEnterpriseSeats} seats.");
 
         if (request.DurationDays is < 1)
             return BadRequest("DurationDays must be positive, or omitted for an indefinite grant.");
@@ -162,6 +162,122 @@ public class AdminController : ControllerBase
         await _db.SaveChangesAsync();
 
         return await ToAdminServerResponseAsync(server);
+    }
+
+    // Lets a site admin manage a customer's Enterprise team directly - e.g. a Discord ticket
+    // asks to add/remove someone and the owner isn't around/available to do it themselves. This
+    // bypasses the owner/manager-only checks ServersController.AddMember/RemoveMember enforce
+    // for a normal caller, on purpose - a site admin already has full authority over every
+    // server's plan/seats here, so the same trust extends to who's actually on the team.
+    [HttpGet("servers/{id:guid}/members")]
+    public async Task<ActionResult<List<ServerMemberResponse>>> ListServerMembers(Guid id)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var server = await _db.Servers.FindAsync(id);
+        if (server is null) return NotFound();
+
+        var owner = await _db.Users.FindAsync(server.OwnerUserId);
+        var members = await _db.ServerMembers
+            .Include(m => m.User)
+            .Where(m => m.ServerId == id)
+            .OrderBy(m => m.AddedAt)
+            .ToListAsync();
+
+        var scanStats = await _db.ScanSessions
+            .Where(s => s.ServerId == id && s.CreatedByUserId != null)
+            .GroupBy(s => s.CreatedByUserId!.Value)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActive = g.Max(s => s.CreatedAt) })
+            .ToDictionaryAsync(g => g.UserId);
+
+        var result = new List<ServerMemberResponse>();
+        if (owner is not null)
+        {
+            var os = scanStats.GetValueOrDefault(owner.Id);
+            result.Add(new ServerMemberResponse(owner.Id, owner.Id, owner.Username, "Owner", server.CreatedAt, os?.Count ?? 0, os?.LastActive));
+        }
+        result.AddRange(members.Select(m =>
+        {
+            var s = scanStats.GetValueOrDefault(m.UserId);
+            return new ServerMemberResponse(m.Id, m.UserId, m.User?.Username ?? "(bilinmiyor)", m.Role, m.AddedAt, s?.Count ?? 0, s?.LastActive);
+        }));
+
+        return result;
+    }
+
+    [HttpPost("servers/{id:guid}/members")]
+    public async Task<ActionResult<ServerMemberResponse>> AddServerMember(Guid id, AddMemberRequest request)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var server = await _db.Servers.FindAsync(id);
+        if (server is null) return NotFound();
+        if (server.EffectivePlan != "Enterprise")
+            return BadRequest("Team members require an active Enterprise plan.");
+
+        var identifier = request.Identifier?.Trim();
+        if (string.IsNullOrWhiteSpace(identifier))
+            return BadRequest("A Discord username, Discord ID, or Google email is required.");
+
+        var isEmail = identifier.Contains('@');
+        var isDiscordId = !isEmail && identifier.All(char.IsDigit);
+        var user = isEmail
+            ? await _db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == identifier.ToLower())
+            : isDiscordId
+                ? await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == identifier)
+                : await _db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == identifier.ToLower());
+
+        if (user is null)
+        {
+            return NotFound(isEmail
+                ? "No NexusGuard user with that email - they need to sign in with Google at least once first."
+                : isDiscordId
+                    ? "No NexusGuard user with that Discord ID - they need to sign in with Discord at least once first."
+                    : "No NexusGuard user with that Discord username - they need to sign in with Discord at least once first.");
+        }
+
+        if (user.Id == server.OwnerUserId)
+            return BadRequest("That user already owns this server.");
+
+        var alreadyMember = await _db.ServerMembers.AnyAsync(m => m.ServerId == id && m.UserId == user.Id);
+        if (alreadyMember)
+            return BadRequest("That user is already a member of this server.");
+
+        var seats = server.EnterpriseSeats ?? 0;
+        var currentMemberCount = await _db.ServerMembers.CountAsync(m => m.ServerId == id);
+        if (currentMemberCount + 1 >= seats)
+            return BadRequest($"This server's Enterprise plan is limited to {seats} people (including the owner) - remove someone first or raise the seat count from Sunucular & Planlar.");
+
+        var member = new ServerMember
+        {
+            Id = Guid.NewGuid(),
+            ServerId = id,
+            UserId = user.Id,
+            Role = "Member",
+            AddedAt = DateTime.UtcNow,
+        };
+
+        _db.ServerMembers.Add(member);
+        await _db.SaveChangesAsync();
+
+        return new ServerMemberResponse(member.Id, user.Id, user.Username, member.Role, member.AddedAt, 0, null);
+    }
+
+    [HttpDelete("servers/{id:guid}/members/{memberId:guid}")]
+    public async Task<IActionResult> RemoveServerMember(Guid id, Guid memberId)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var member = await _db.ServerMembers.FirstOrDefaultAsync(m => m.Id == memberId && m.ServerId == id);
+        if (member is null) return NotFound();
+
+        _db.ServerMembers.Remove(member);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
     }
 
     private async Task<AdminServerResponse> ToAdminServerResponseAsync(Server server)
@@ -299,11 +415,17 @@ public class AdminController : ControllerBase
     // of only after their session expires.
     private async Task<(ActionResult? Forbidden, User? Caller)> RequireSiteAdminAsync()
     {
+        // Bare Forbid() throws here (500, not 403) - this API has multiple auth schemes
+        // configured with no DefaultForbidScheme, so ForbidAsync can't resolve which one to
+        // challenge. StatusCode(403) sidesteps that entirely, same fix as everywhere else in
+        // this codebase that hit the same trap.
         var claim = User.FindFirst(DashboardSessionClaimTypes.UserId)?.Value;
-        if (!Guid.TryParse(claim, out var userId)) return (Forbid(), null);
+        if (!Guid.TryParse(claim, out var userId))
+            return (StatusCode(StatusCodes.Status403Forbidden), null);
 
         var user = await _db.Users.FindAsync(userId);
-        if (user is null || !user.IsSiteAdmin) return (Forbid(), null);
+        if (user is null || !user.IsSiteAdmin)
+            return (StatusCode(StatusCodes.Status403Forbidden), null);
 
         return (null, user);
     }

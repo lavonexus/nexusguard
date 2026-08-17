@@ -487,6 +487,26 @@ export function adminCancelPlan(serverId: string) {
   });
 }
 
+// Site-admin team management for any Enterprise server - bypasses the owner/manager-only
+// checks the customer-facing /api/servers/{id}/members endpoints enforce, for when a Discord
+// ticket asks to add/remove someone and the owner isn't around to do it themselves.
+export function listAdminServerMembers(serverId: string) {
+  return sessionRequest<ServerMemberResponse[]>(`/api/admin/servers/${serverId}/members`);
+}
+
+export function adminAddMember(serverId: string, identifier: string) {
+  return sessionRequest<ServerMemberResponse>(`/api/admin/servers/${serverId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+export function adminRemoveMember(serverId: string, memberId: string) {
+  return sessionRequest<void>(`/api/admin/servers/${serverId}/members/${memberId}`, {
+    method: "DELETE",
+  });
+}
+
 // Reactive safety net for the marketplace - listings/reviews publish immediately with no
 // approval gate, so this is the only way to take down something inappropriate after the fact.
 export function adminDeleteMarketplaceListing(id: string) {
