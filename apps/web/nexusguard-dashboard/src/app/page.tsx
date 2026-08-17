@@ -6,6 +6,7 @@ import { loadSession, type ServerSession } from "@/lib/session";
 import { DISCORD_PURCHASE_URL } from "@/lib/api";
 import HeroBackdrop from "@/components/HeroBackdrop";
 import DashboardPreview from "@/components/DashboardPreview";
+import PinDownloadCard from "@/components/PinDownloadCard";
 import { useT, type Dict } from "@/lib/i18n/useT";
 
 interface Feature {
@@ -17,6 +18,7 @@ interface Package {
   name: string;
   tagline: string;
   price: string;
+  originalPrice?: string;
   period: string;
   features: string[];
   highlight?: boolean;
@@ -88,62 +90,50 @@ const PACKAGES: Dict<Package[]> = {
     {
       name: "PRO",
       tagline: "Tek kişilik yönetim",
-      price: "₺1000",
+      price: "$20",
       period: "/ay",
-      features: ["Sınırsız tarama", "Yapay zeka destekli risk özetleri", "1 yönetici hesabı"],
+      features: ["Sınırsız tarama", "Tool Designer kaydetme", "1 yönetici hesabı"],
     },
     {
       name: "PRO DUO",
       tagline: "İki yönetici",
-      price: "₺1800",
+      price: "$25",
       period: "/ay",
       features: ["PRO'daki her şey", "2 yönetici hesabı", "Sınırsız tarama"],
     },
     {
       name: "ENTERPRISE",
-      tagline: "10 kişilik ekip",
-      price: "₺5000",
+      tagline: "5 kişiden başlar, kişi başı +$5",
+      price: "$30",
+      originalPrice: "$45",
       period: "/ay",
-      features: ["PRO'daki her şey", "10 kişilik ekip yönetimi", "Kurumsal ekip paneli"],
+      features: ["PRO'daki her şey", "5+ kişilik ekip yönetimi", "Kurumsal ekip paneli"],
       highlight: true,
-    },
-    {
-      name: "ENTERPRISE",
-      tagline: "15 kişilik ekip",
-      price: "₺6000",
-      period: "/ay",
-      features: ["PRO'daki her şey", "15 kişilik ekip yönetimi", "Kurumsal ekip paneli"],
     },
   ],
   en: [
     {
       name: "PRO",
       tagline: "Single-admin management",
-      price: "₺1000",
+      price: "$20",
       period: "/mo",
-      features: ["Unlimited scans", "AI-powered risk summaries", "1 admin account"],
+      features: ["Unlimited scans", "Tool Designer saving", "1 admin account"],
     },
     {
       name: "PRO DUO",
       tagline: "Two admins",
-      price: "₺1800",
+      price: "$25",
       period: "/mo",
       features: ["Everything in PRO", "2 admin accounts", "Unlimited scans"],
     },
     {
       name: "ENTERPRISE",
-      tagline: "Team of 10",
-      price: "₺5000",
+      tagline: "Starts at 5 people, +$5 each",
+      price: "$30",
+      originalPrice: "$45",
       period: "/mo",
-      features: ["Everything in PRO", "Team of 10 management", "Enterprise team panel"],
+      features: ["Everything in PRO", "5+ person team management", "Enterprise team panel"],
       highlight: true,
-    },
-    {
-      name: "ENTERPRISE",
-      tagline: "Team of 15",
-      price: "₺6000",
-      period: "/mo",
-      features: ["Everything in PRO", "Team of 15 management", "Enterprise team panel"],
     },
   ],
 };
@@ -298,33 +288,39 @@ export default function Home() {
       {/* Hero */}
       <section className="relative isolate overflow-hidden px-6 pb-16 pt-20 sm:pt-28">
         <HeroBackdrop />
-        <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs font-medium text-zinc-400">
-            {t.badge}
-          </span>
-          <h1 className="mt-6 text-5xl font-semibold tracking-tight text-white sm:text-6xl">
-            {t.heroTitleLine1}
-            <br />
-            {t.heroTitleLine2}
-          </h1>
-          <p className="mt-5 max-w-xl text-balance text-base text-zinc-400 sm:text-lg">{t.heroSubtitle}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={primaryHref}
-              className="flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500"
-            >
-              {primaryLabel} →
-            </Link>
-            <a
-              href="#how-it-works"
-              className="flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/60 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-zinc-600"
-            >
-              {t.howItWorks}
-            </a>
+        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2">
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs font-medium text-zinc-400">
+              {t.badge}
+            </span>
+            <h1 className="mt-6 text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+              {t.heroTitleLine1}
+              <br />
+              {t.heroTitleLine2}
+            </h1>
+            <p className="mt-5 max-w-xl text-balance text-base text-zinc-400 sm:text-lg">{t.heroSubtitle}</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href={primaryHref}
+                className="flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+              >
+                {primaryLabel} →
+              </Link>
+              <a
+                href="#how-it-works"
+                className="flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/60 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-zinc-600"
+              >
+                {t.howItWorks}
+              </a>
+            </div>
+          </div>
+
+          <div className="mx-auto w-full max-w-sm lg:mx-0 lg:ml-auto">
+            <PinDownloadCard />
           </div>
         </div>
 
-        <div className="relative mt-16 px-4">
+        <div className="relative mx-auto mt-16 max-w-6xl px-4">
           <DashboardPreview />
         </div>
       </section>
@@ -387,7 +383,7 @@ export default function Home() {
           <h2 className="text-center text-2xl font-semibold text-white sm:text-3xl">{t.packagesTitle}</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm text-zinc-400">{t.packagesSubtitle}</p>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
             {packages.map((pkg, i) => (
               <div
                 key={`${pkg.name}-${pkg.tagline}-${i}`}
@@ -404,9 +400,12 @@ export default function Home() {
                 )}
                 <h3 className="text-sm font-semibold tracking-wide text-white">{pkg.name}</h3>
                 <p className="mt-1 text-xs text-zinc-500">{pkg.tagline}</p>
-                <div className="mt-4 text-2xl font-semibold text-white">
-                  {pkg.price}
-                  <span className="text-sm font-normal text-zinc-500">{pkg.period}</span>
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="text-2xl font-semibold text-white">
+                    {pkg.price}
+                    <span className="text-sm font-normal text-zinc-500">{pkg.period}</span>
+                  </span>
+                  {pkg.originalPrice && <span className="text-sm text-zinc-600 line-through">{pkg.originalPrice}</span>}
                 </div>
 
                 <ul className="mt-6 flex-1 space-y-2 text-sm text-zinc-300">
