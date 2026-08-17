@@ -152,12 +152,12 @@ public class ServersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/members")]
-    [Authorize(AuthenticationSchemes = OwnerSchemes)]
+    [Authorize(AuthenticationSchemes = DashboardSessionAuthenticationOptions.SchemeName)]
     public async Task<ActionResult<ServerMemberResponse>> AddMember(Guid id, AddMemberRequest request)
     {
         var server = await _db.Servers.FindAsync(id);
         if (server is null) return NotFound();
-        if (!await CallerOwnsServerAsync(server)) return Forbid();
+        if (!await CallerCanManageMembersAsync(server)) return StatusCode(StatusCodes.Status403Forbidden);
 
         if (server.EffectivePlan != "Enterprise")
             return BadRequest("Team members require an active Enterprise plan.");
@@ -216,12 +216,12 @@ public class ServersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}/members/{memberId:guid}")]
-    [Authorize(AuthenticationSchemes = OwnerSchemes)]
+    [Authorize(AuthenticationSchemes = DashboardSessionAuthenticationOptions.SchemeName)]
     public async Task<IActionResult> RemoveMember(Guid id, Guid memberId)
     {
         var server = await _db.Servers.FindAsync(id);
         if (server is null) return NotFound();
-        if (!await CallerOwnsServerAsync(server)) return Forbid();
+        if (!await CallerCanManageMembersAsync(server)) return StatusCode(StatusCodes.Status403Forbidden);
 
         var member = await _db.ServerMembers.FirstOrDefaultAsync(m => m.Id == memberId && m.ServerId == id);
         if (member is null) return NotFound();
@@ -230,6 +230,28 @@ public class ServersController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    // Owner-only, not delegable to a Manager - handing out the ability to add/remove people is
+    // a bigger grant than add/remove itself, so it stays with whoever actually owns the server.
+    [HttpPut("{id:guid}/members/{memberId:guid}/role")]
+    [Authorize(AuthenticationSchemes = DashboardSessionAuthenticationOptions.SchemeName)]
+    public async Task<ActionResult<ServerMemberResponse>> SetMemberRole(Guid id, Guid memberId, SetMemberRoleRequest request)
+    {
+        var server = await _db.Servers.FindAsync(id);
+        if (server is null) return NotFound();
+        if (!await CallerIsOwnerBySessionAsync(server)) return StatusCode(StatusCodes.Status403Forbidden);
+
+        if (request.Role != "Manager" && request.Role != "Member")
+            return BadRequest("Role must be \"Manager\" or \"Member\".");
+
+        var member = await _db.ServerMembers.Include(m => m.User).FirstOrDefaultAsync(m => m.Id == memberId && m.ServerId == id);
+        if (member is null) return NotFound();
+
+        member.Role = request.Role;
+        await _db.SaveChangesAsync();
+
+        return new ServerMemberResponse(member.Id, member.UserId, member.User?.Username ?? "(unknown)", member.Role, member.AddedAt);
     }
 
     // Scanner.exe theming - colors/labels/logo/watermark the player sees while a scan runs.
@@ -330,5 +352,27 @@ public class ServersController : ControllerBase
         if (!Guid.TryParse(sessionClaim, out var callerUserId)) return false;
 
         return await _db.ServerMembers.AnyAsync(m => m.ServerId == server.Id && m.UserId == callerUserId);
+    }
+
+    // Strictly the account that owns the server, resolved from the dashboard session only - no
+    // API-key fallback. The API key is the single credential shared with every team member once
+    // they join (see PendingMembershipBanner on the frontend), so holding it no longer proves
+    // someone is the owner - only a resolved session identifies a specific individual caller.
+    private async Task<bool> CallerIsOwnerBySessionAsync(Server server)
+    {
+        var userId = await ResolveSessionUserIdAsync();
+        return userId.HasValue && userId.Value == server.OwnerUserId;
+    }
+
+    // Owner, or a member the owner has promoted to Manager - who's allowed to add/remove
+    // teammates day to day without being the account owner. Session-only for the same reason
+    // as CallerIsOwnerBySessionAsync above.
+    private async Task<bool> CallerCanManageMembersAsync(Server server)
+    {
+        var userId = await ResolveSessionUserIdAsync();
+        if (!userId.HasValue) return false;
+        if (userId.Value == server.OwnerUserId) return true;
+
+        return await _db.ServerMembers.AnyAsync(m => m.ServerId == server.Id && m.UserId == userId.Value && m.Role == "Manager");
     }
 }

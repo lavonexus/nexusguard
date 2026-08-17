@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ApiError, addMember, listMembers, removeMember, type ServerMemberResponse } from "@/lib/api";
+import { ApiError, addMember, listMembers, removeMember, setMemberRole, type ServerMemberResponse } from "@/lib/api";
 import { useServerContext } from "@/lib/serverContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useT, type Dict } from "@/lib/i18n/useT";
@@ -26,7 +26,11 @@ const STRINGS: Dict<{
   loading: string;
   owner: string;
   member: string;
+  manager: string;
   remove: string;
+  makeManager: string;
+  revokeManager: string;
+  readOnlyNotice: string;
 }> = {
   tr: {
     gateTitle: "Kurumsal - ekip yönetimi",
@@ -48,7 +52,11 @@ const STRINGS: Dict<{
     loading: "Yükleniyor...",
     owner: "Sahip",
     member: "Üye",
+    manager: "Yönetici",
     remove: "Kaldır",
+    makeManager: "Yönetici yap",
+    revokeManager: "Yöneticiliği al",
+    readOnlyNotice: "Üye ekleyip çıkarmak için sahip ya da yönetici olman gerekiyor.",
   },
   en: {
     gateTitle: "Enterprise - team management",
@@ -70,7 +78,11 @@ const STRINGS: Dict<{
     loading: "Loading...",
     owner: "Owner",
     member: "Member",
+    manager: "Manager",
     remove: "Remove",
+    makeManager: "Make manager",
+    revokeManager: "Revoke manager",
+    readOnlyNotice: "You need to be the owner or a manager to add or remove members.",
   },
 };
 
@@ -119,6 +131,14 @@ export default function TeamPage() {
   const seatsUsed = members?.length ?? 0;
   const seatsFull = members !== null && seatsUsed >= seats;
 
+  // The API key is now shared with every joined member (see PendingMembershipBanner), so it
+  // can no longer stand in for "who is this." Whether the signed-in caller can add/remove
+  // people is read off their own row in the roster we already fetched, not assumed from
+  // holding the key.
+  const myRole = members?.find((m) => m.userId === session.userId)?.role;
+  const isOwner = myRole === "Owner";
+  const canManage = isOwner || myRole === "Manager";
+
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between">
@@ -135,13 +155,16 @@ export default function TeamPage() {
         <p className="mt-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">{error}</p>
       )}
 
-      {seatsFull ? (
+      {members !== null && !canManage ? (
+        <p className="mt-6 rounded-md border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-sm text-zinc-400">
+          {t.readOnlyNotice}
+        </p>
+      ) : seatsFull ? (
         <p className="mt-6 rounded-md border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-sm text-amber-300">
           {t.seatsFull.replace("{seats}", String(seats))}
         </p>
       ) : (
         <AddMemberForm
-          apiKey={session.apiKey}
           serverId={session.serverId}
           t={t}
           onAdded={(m) => setMembers((prev) => (prev ? [...prev, m] : [m]))}
@@ -170,11 +193,15 @@ export default function TeamPage() {
               <MemberRow
                 key={m.id}
                 member={m}
-                apiKey={session.apiKey}
                 serverId={session.serverId}
                 t={t}
                 locale={locale}
+                canRemove={canManage}
+                isOwnerViewer={isOwner}
                 onRemoved={() => setMembers((prev) => prev?.filter((x) => x.id !== m.id) ?? null)}
+                onRoleChanged={(updated) =>
+                  setMembers((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? null)
+                }
               />
             ))}
           </tbody>
@@ -185,12 +212,10 @@ export default function TeamPage() {
 }
 
 function AddMemberForm({
-  apiKey,
   serverId,
   t,
   onAdded,
 }: {
-  apiKey: string;
   serverId: string;
   t: { identifierPlaceholder: string; adding: string; add: string; apiUnreachable: string };
   onAdded: (m: ServerMemberResponse) => void;
@@ -206,7 +231,7 @@ function AddMemberForm({
     setLoading(true);
     setError(null);
     try {
-      const member = await addMember(apiKey, serverId, identifier.trim());
+      const member = await addMember(serverId, identifier.trim());
       onAdded(member);
       setIdentifier("");
     } catch (err) {
@@ -238,48 +263,78 @@ function AddMemberForm({
 
 function MemberRow({
   member,
-  apiKey,
   serverId,
   t,
   locale,
+  canRemove,
+  isOwnerViewer,
   onRemoved,
+  onRoleChanged,
 }: {
   member: ServerMemberResponse;
-  apiKey: string;
   serverId: string;
-  t: { owner: string; member: string; remove: string };
+  t: { owner: string; member: string; manager: string; remove: string; makeManager: string; revokeManager: string };
   locale: "tr" | "en";
+  canRemove: boolean;
+  isOwnerViewer: boolean;
   onRemoved: () => void;
+  onRoleChanged: (updated: ServerMemberResponse) => void;
 }) {
   const [removing, setRemoving] = useState(false);
+  const [changingRole, setChangingRole] = useState(false);
 
   async function handleRemove() {
     setRemoving(true);
     try {
-      await removeMember(apiKey, serverId, member.id);
+      await removeMember(serverId, member.id);
       onRemoved();
     } catch {
       setRemoving(false);
     }
   }
 
+  async function handleToggleManager() {
+    setChangingRole(true);
+    try {
+      const updated = await setMemberRole(serverId, member.id, member.role === "Manager" ? "Member" : "Manager");
+      onRoleChanged(updated);
+    } catch {
+      // Best-effort - the row just stays as it was, no separate error surface for this toggle.
+    } finally {
+      setChangingRole(false);
+    }
+  }
+
+  const roleLabel = member.role === "Owner" ? t.owner : member.role === "Manager" ? t.manager : t.member;
+
   return (
     <tr>
       <td className="px-4 py-2.5 font-medium text-zinc-200">{member.username}</td>
-      <td className="px-4 py-2.5 text-zinc-400">{member.role === "Owner" ? t.owner : t.member}</td>
+      <td className="px-4 py-2.5 text-zinc-400">{roleLabel}</td>
       <td className="px-4 py-2.5 text-zinc-500">
         {new Date(member.addedAt).toLocaleDateString(locale === "en" ? "en-US" : "tr-TR")}
       </td>
       <td className="px-4 py-2.5 text-right">
-        {member.role !== "Owner" && (
-          <button
-            onClick={handleRemove}
-            disabled={removing}
-            className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400 disabled:opacity-50"
-          >
-            {removing ? "..." : t.remove}
-          </button>
-        )}
+        <div className="flex items-center justify-end gap-1.5">
+          {isOwnerViewer && member.role !== "Owner" && (
+            <button
+              onClick={handleToggleManager}
+              disabled={changingRole}
+              className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-violet-700 hover:text-violet-300 disabled:opacity-50"
+            >
+              {changingRole ? "..." : member.role === "Manager" ? t.revokeManager : t.makeManager}
+            </button>
+          )}
+          {canRemove && member.role !== "Owner" && (
+            <button
+              onClick={handleRemove}
+              disabled={removing}
+              className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400 disabled:opacity-50"
+            >
+              {removing ? "..." : t.remove}
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );

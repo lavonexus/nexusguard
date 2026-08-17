@@ -16,9 +16,13 @@ public record ServerResponse(
 
 public record ServerMemberResponse(Guid Id, Guid UserId, string Username, string Role, DateTime AddedAt);
 
-// A Discord username or (for Google-only accounts) the email they registered with - see
-// ServersController.AddMember for how the two are told apart.
+// A Discord username, a Discord ID, or (for Google-only accounts) the email they registered
+// with - see ServersController.AddMember for how the three are told apart.
 public record AddMemberRequest(string Identifier);
+
+// Role must be "Manager" or "Member" - promoting/demoting the owner isn't a thing, they're
+// never a ServerMember row in the first place (see ServerMember.cs).
+public record SetMemberRoleRequest(string Role);
 
 // Same shape as ServerResponse plus the caller's relationship to it - GET /api/servers/mine
 // unions owned and member servers, and the dashboard needs to tell them apart (only an

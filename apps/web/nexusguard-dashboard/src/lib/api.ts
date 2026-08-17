@@ -330,20 +330,30 @@ export function listMembers(apiKey: string, serverId: string) {
   });
 }
 
-// identifier is a Discord username or (for Google-only accounts) the email they registered
-// with - the API tells them apart by whether it contains "@".
-export function addMember(apiKey: string, serverId: string, identifier: string) {
-  return request<ServerMemberResponse>(`/api/servers/${serverId}/members`, {
+// identifier is a Discord username, a Discord ID, or (for Google-only accounts) the email
+// they registered with - the API tells them apart by format. Session-authenticated only (see
+// ServersController.AddMember): the shared API key can't identify which individual member is
+// calling, so it's no longer accepted here.
+export function addMember(serverId: string, identifier: string) {
+  return sessionRequest<ServerMemberResponse>(`/api/servers/${serverId}/members`, {
     method: "POST",
-    headers: { "X-Api-Key": apiKey },
     body: JSON.stringify({ identifier }),
   });
 }
 
-export function removeMember(apiKey: string, serverId: string, memberId: string) {
-  return request<void>(`/api/servers/${serverId}/members/${memberId}`, {
+export function removeMember(serverId: string, memberId: string) {
+  return sessionRequest<void>(`/api/servers/${serverId}/members/${memberId}`, {
     method: "DELETE",
-    headers: { "X-Api-Key": apiKey },
+  });
+}
+
+// Owner-only server-side (see ServersController.SetMemberRole) - grants or revokes a member's
+// ability to add/remove teammates themselves. Session-authenticated only: the shared API key
+// can't tell members apart from each other or from the owner, so it can't be the basis for this.
+export function setMemberRole(serverId: string, memberId: string, role: "Manager" | "Member") {
+  return sessionRequest<ServerMemberResponse>(`/api/servers/${serverId}/members/${memberId}/role`, {
+    method: "PUT",
+    body: JSON.stringify({ role }),
   });
 }
 
