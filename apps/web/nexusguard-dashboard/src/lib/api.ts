@@ -639,6 +639,14 @@ export interface AdminScanSummaryResponse {
   serverName: string;
   createdByUsername: string | null;
   detectionCount: number;
+  aiSummary: string | null;
+  startedAt: string | null;
+  discordUserId: string | null;
+  discordUsername: string | null;
+  discordAvatarUrl: string | null;
+  steamId64: string | null;
+  steamUsername: string | null;
+  steamAvatarUrl: string | null;
 }
 
 export interface AdminScanDetailResponse {

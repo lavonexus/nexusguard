@@ -163,9 +163,21 @@ public class DetectionEngine : IDetectionEngine
                 fact.Name.Contains(f, StringComparison.OrdinalIgnoreCase));
             if (match is null) continue;
 
+            // A name-fragment match alone is weak by design (never convict on filename alone -
+            // see EvaluateFileEvidence's identical reasoning). ProcessScanner already captures
+            // Sha256/Signed/Publisher for every process; this used to be collected and then
+            // discarded here. A validly signed binary with a real publisher matching a tool-name
+            // fragment (a legitimate app that happens to contain "injector"/"reclass"/etc. in its
+            // name) stays at the weaker default instead of being treated the same as an unsigned
+            // one - same unsigned-bump pattern EvaluateFileEvidence already uses, not a new idiom.
+            var confidence = "Low";
+            if (!fact.Signed || string.IsNullOrWhiteSpace(fact.Publisher))
+                confidence = BumpConfidence(confidence);
+
             detections.Add(NewDetection(sessionId, "known-tool-process", 30,
                 $"Process '{fact.Name}' (pid {fact.Pid}) matches known tool signature '{match}'.",
-                fact.Name, category: "SUSPICIOUS PROCESS", confidence: "Medium"));
+                fact.Name, category: "SUSPICIOUS PROCESS", confidence: confidence,
+                sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
         }
         return detections;
     }
@@ -498,8 +510,10 @@ public class DetectionEngine : IDetectionEngine
         }
     }
 
-    // Wire shapes the scanner submits - raw facts only, no opinion fields.
-    private record ProcessFact(string Name, int Pid);
+    // Wire shapes the scanner submits - raw facts only, no opinion fields. ProcessFact mirrors
+    // only the fields this engine actually reads; ProcessScanner also sends Path/ParentProcessName,
+    // which JSON deserialization simply ignores here.
+    private record ProcessFact(string Name, int Pid, string? Sha256, bool Signed, string? Publisher);
     private record ModuleFact(string Name, string Path, bool UnderGameDir, bool UnderSystemDir);
     private record FileFact(string Name, string Path);
     private record FiveMArtifactFact(string Name, string Path, bool InPluginsDir);

@@ -375,7 +375,9 @@ public class AdminController : ControllerBase
 
     private static AdminScanSummaryResponse ToAdminScanSummary(ScanSession s) => new(
         s.Id, s.PlayerIdentifier, s.Status.ToString(), s.RiskScore, s.CreatedAt, s.CompletedAt,
-        s.ServerId, s.Server?.Name ?? "(bilinmiyor)", s.CreatedByUser?.Username, s.Detections.Count);
+        s.ServerId, s.Server?.Name ?? "(bilinmiyor)", s.CreatedByUser?.Username, s.Detections.Count,
+        s.AiSummary, s.StartedAt, s.DiscordUserId, s.DiscordUsername, s.DiscordAvatarUrl,
+        s.SteamId64, s.SteamUsername, s.SteamAvatarUrl);
 
     // Reactive safety net for the marketplace (Controllers/MarketplaceController.cs) - listings
     // and reviews publish immediately with no approval gate, so this is the only way to take
