@@ -45,6 +45,13 @@ export const GOOGLE_LOGIN_URL = `${API_BASE_URL}/api/auth/google/login`;
 // ticket, confirmed by a human, then applied by a site admin from /admin.
 export const DISCORD_PURCHASE_URL = "https://discord.gg/nexusguard";
 
+// Anonymous, read-only - lets the home page's download widget tell a player their PIN is
+// wrong or expired before anything downloads, instead of handing them an exe that fails later.
+export async function checkScanPin(pin: string): Promise<boolean> {
+  const result = await request<{ valid: boolean }>(`/api/scanner/pin-check?pin=${encodeURIComponent(pin)}`);
+  return result.valid;
+}
+
 export interface UserResponse {
   id: string;
   username: string;

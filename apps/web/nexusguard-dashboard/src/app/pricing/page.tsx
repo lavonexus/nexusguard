@@ -42,10 +42,15 @@ const TIERS: Dict<Tier[]> = {
     },
     {
       plan: "ProDuo",
-      name: "PRO DUO",
-      tagline: "İki yönetici",
+      name: "PROFESSIONAL",
+      tagline: "İki yönetici + 7/24 destek",
       price: "$25/ay",
-      features: ["PRO'daki her şey", "2 yönetici hesabı", "Sınırsız tarama"],
+      features: [
+        "PRO'daki her şey",
+        "2 yönetici hesabı",
+        "7/24 teknik destek",
+        "Tarama sonucu yorumlama desteği",
+      ],
     },
   ],
   en: [
@@ -71,10 +76,15 @@ const TIERS: Dict<Tier[]> = {
     },
     {
       plan: "ProDuo",
-      name: "PRO DUO",
-      tagline: "Two admins",
+      name: "PROFESSIONAL",
+      tagline: "Two admins + 24/7 support",
       price: "$25/mo",
-      features: ["Everything in PRO", "2 admin accounts", "Unlimited scans"],
+      features: [
+        "Everything in PRO",
+        "2 admin accounts",
+        "24/7 technical support",
+        "Scan result interpretation help",
+      ],
     },
   ],
 };
@@ -84,7 +94,7 @@ const ENTERPRISE_STRINGS: Dict<{ name: string; tagline: string; features: string
     name: "ENTERPRISE",
     tagline: "5 kişiden başlar, kişi başı +$5",
     features: [
-      "PRO'daki her şey",
+      "PROFESSIONAL'daki her şey",
       "5+ kişilik ekip yönetimi",
       "Kurumsal ekip paneli, yönetici rolleri",
       "Üye ekle/çıkar (Kurumsal sayfası)",
@@ -94,7 +104,7 @@ const ENTERPRISE_STRINGS: Dict<{ name: string; tagline: string; features: string
     name: "ENTERPRISE",
     tagline: "Starts at 5 people, +$5 each",
     features: [
-      "Everything in PRO",
+      "Everything in PROFESSIONAL",
       "5+ person team management",
       "Enterprise team panel, manager roles",
       "Add/remove members (Enterprise page)",

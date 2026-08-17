@@ -18,11 +18,13 @@ interface Group {
   rows: Row[];
 }
 
-// Every row here is a real, verified gate in the API - not aspirational copy. See
+// Every technical row here is a real, verified gate in the API - not aspirational copy. See
 // ScansController (daily scan cap), MarketplaceController/ServersController.UpdateTheme (Tool
 // Designer save + marketplace install require a paid plan), ServersController.AddMember
 // (Enterprise-only team panel). AI summary generation has no plan check anywhere, so it's
-// listed as included on every plan rather than repeating the site's old Pro-only claim.
+// listed as included on every plan rather than repeating the site's old Pro-only claim. The
+// support-level rows (Destek/Support, scan-interpretation help) are service commitments, not
+// code-enforced gates - kept honest by being framed as support quality, not scan behavior.
 const GROUPS: Dict<Group[]> = {
   tr: [
     {
@@ -48,7 +50,8 @@ const GROUPS: Dict<Group[]> = {
       rows: [
         { label: "Yönetici hesabı", free: "1", pro: "1", proDuo: "2", enterprise: "5+" },
         { label: "Kurumsal ekip paneli (üye ekle/çıkar, yönetici rolü)", free: false, pro: false, proDuo: false, enterprise: true },
-        { label: "Destek", free: "Standart", pro: "Öncelikli", proDuo: "Öncelikli", enterprise: "Özel" },
+        { label: "Destek", free: "Standart", pro: "Öncelikli", proDuo: "7/24", enterprise: "Özel" },
+        { label: "Tarama sonucu yorumlama desteği", free: false, pro: false, proDuo: true, enterprise: true },
       ],
     },
   ],
@@ -76,7 +79,8 @@ const GROUPS: Dict<Group[]> = {
       rows: [
         { label: "Admin accounts", free: "1", pro: "1", proDuo: "2", enterprise: "5+" },
         { label: "Enterprise team panel (add/remove, manager role)", free: false, pro: false, proDuo: false, enterprise: true },
-        { label: "Support", free: "Standard", pro: "Priority", proDuo: "Priority", enterprise: "Dedicated" },
+        { label: "Support", free: "Standard", pro: "Priority", proDuo: "24/7", enterprise: "Dedicated" },
+        { label: "Scan result interpretation help", free: false, pro: false, proDuo: true, enterprise: true },
       ],
     },
   ],
@@ -114,7 +118,7 @@ export default function FeatureComparisonTable() {
               <th className="px-4 py-3 font-medium text-zinc-400">{t.feature}</th>
               <th className="px-4 py-3 font-medium text-zinc-400">Free</th>
               <th className="px-4 py-3 font-medium text-zinc-400">Pro</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Pro Duo</th>
+              <th className="px-4 py-3 font-medium text-zinc-400">Professional</th>
               <th className="px-4 py-3 font-medium text-violet-300">Enterprise</th>
             </tr>
           </thead>

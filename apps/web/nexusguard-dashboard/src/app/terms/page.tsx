@@ -68,7 +68,7 @@ const SECTIONS_TR: LegalSection[] = [
       <>
         <p>
           Her yeni sunucu otomatik olarak Free planla başlar ve günde bir tarama hakkı içerir.
-          Ücretli planlar (PRO, PRO DUO, Enterprise) daha fazla tarama ve ekip yönetimi
+          Ücretli planlar (PRO, PROFESSIONAL, Enterprise) daha fazla tarama ve ekip yönetimi
           sağlar; güncel fiyatlandırma /pricing sayfasında yer alır.
         </p>
         <p>
@@ -251,7 +251,7 @@ const SECTIONS_EN: LegalSection[] = [
       <>
         <p>
           Every new server automatically starts on the Free plan and includes one scan a day.
-          Paid plans (PRO, PRO DUO, Enterprise) provide more scans and team management; current
+          Paid plans (PRO, PROFESSIONAL, Enterprise) provide more scans and team management; current
           pricing is on the /pricing page.
         </p>
         <p>

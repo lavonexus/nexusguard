@@ -66,6 +66,8 @@ public record UpdateScannerThemeRequest(
 
 public record ScannerHeartbeatRequest(string? StatusNote);
 
+public record PinCheckResponse(bool Valid);
+
 public record ScannerResultRequest(string ResultType, string DataJson);
 
 // Phase 7: the scanner uploads a candidate file's raw bytes for server-side YARA scanning.

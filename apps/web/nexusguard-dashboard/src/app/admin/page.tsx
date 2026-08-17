@@ -361,7 +361,13 @@ function durationPresets(t: T): { label: string; days: number | null }[] {
 }
 
 const PLAN_OPTIONS: Plan[] = ["Free", "Pro", "ProDuo", "Enterprise"];
-const SEAT_OPTIONS = [5, 10, 15];
+const PLAN_DISPLAY_LABEL: Record<Plan, string> = {
+  Free: "Free",
+  Pro: "Pro",
+  ProDuo: "Professional",
+  Enterprise: "Enterprise",
+};
+const MIN_ENTERPRISE_SEATS = 5;
 
 function ServersTab({ t, locale }: { t: T; locale: Locale }) {
   const [query, setQuery] = useState("");
@@ -516,7 +522,7 @@ function ServerRow({
         </td>
         <td className="px-4 py-2.5 text-zinc-400">{server.ownerUsername}</td>
         <td className="px-4 py-2.5 text-zinc-300">
-          {server.plan}
+          {PLAN_DISPLAY_LABEL[server.plan]}
           {server.enterpriseSeats && <span className="text-zinc-500"> · {server.enterpriseSeats} {t.seatsSuffix}</span>}
         </td>
         <td className="px-4 py-2.5 text-zinc-400">{server.memberCount}</td>
@@ -578,7 +584,7 @@ function ServerRow({
             >
               {PLAN_OPTIONS.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {PLAN_DISPLAY_LABEL[p]}
                 </option>
               ))}
             </select>
@@ -587,17 +593,16 @@ function ServerRow({
           {plan === "Enterprise" && (
             <div>
               <div className="text-xs text-zinc-500">{t.seatCount}</div>
-              <select
-                value={seats}
-                onChange={(e) => setSeats(Number(e.target.value))}
-                className="mt-1 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 outline-none focus:border-violet-600"
-              >
-                {SEAT_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s} {t.seatsOption}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-1 flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={MIN_ENTERPRISE_SEATS}
+                  value={seats}
+                  onChange={(e) => setSeats(Math.max(MIN_ENTERPRISE_SEATS, Number(e.target.value)))}
+                  className="w-20 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 outline-none focus:border-violet-600"
+                />
+                <span className="text-xs text-zinc-500">{t.seatsOption}</span>
+              </div>
             </div>
           )}
 

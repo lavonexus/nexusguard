@@ -7,6 +7,7 @@ import { DISCORD_PURCHASE_URL } from "@/lib/api";
 import HeroBackdrop from "@/components/HeroBackdrop";
 import DashboardPreview from "@/components/DashboardPreview";
 import PinDownloadCard from "@/components/PinDownloadCard";
+import EnterpriseSeatStepper from "@/components/EnterpriseSeatStepper";
 import { useT, type Dict } from "@/lib/i18n/useT";
 
 interface Feature {
@@ -95,11 +96,16 @@ const PACKAGES: Dict<Package[]> = {
       features: ["Sınırsız tarama", "Tool Designer kaydetme", "1 yönetici hesabı"],
     },
     {
-      name: "PRO DUO",
-      tagline: "İki yönetici",
+      name: "PROFESSIONAL",
+      tagline: "İki yönetici + 7/24 destek",
       price: "$25",
       period: "/ay",
-      features: ["PRO'daki her şey", "2 yönetici hesabı", "Sınırsız tarama"],
+      features: [
+        "PRO'daki her şey",
+        "2 yönetici hesabı",
+        "7/24 teknik destek",
+        "Tarama sonucu yorumlama desteği",
+      ],
     },
     {
       name: "ENTERPRISE",
@@ -107,7 +113,7 @@ const PACKAGES: Dict<Package[]> = {
       price: "$30",
       originalPrice: "$45",
       period: "/ay",
-      features: ["PRO'daki her şey", "5+ kişilik ekip yönetimi", "Kurumsal ekip paneli"],
+      features: ["PROFESSIONAL'daki her şey", "5+ kişilik ekip yönetimi", "Kurumsal ekip paneli"],
       highlight: true,
     },
   ],
@@ -120,11 +126,16 @@ const PACKAGES: Dict<Package[]> = {
       features: ["Unlimited scans", "Tool Designer saving", "1 admin account"],
     },
     {
-      name: "PRO DUO",
-      tagline: "Two admins",
+      name: "PROFESSIONAL",
+      tagline: "Two admins + 24/7 support",
       price: "$25",
       period: "/mo",
-      features: ["Everything in PRO", "2 admin accounts", "Unlimited scans"],
+      features: [
+        "Everything in PRO",
+        "2 admin accounts",
+        "24/7 technical support",
+        "Scan result interpretation help",
+      ],
     },
     {
       name: "ENTERPRISE",
@@ -132,7 +143,7 @@ const PACKAGES: Dict<Package[]> = {
       price: "$30",
       originalPrice: "$45",
       period: "/mo",
-      features: ["Everything in PRO", "5+ person team management", "Enterprise team panel"],
+      features: ["Everything in PROFESSIONAL", "5+ person team management", "Enterprise team panel"],
       highlight: true,
     },
   ],
@@ -271,6 +282,7 @@ const STRINGS: Dict<{
 
 export default function Home() {
   const [session, setSession] = useState<ServerSession | null>(null);
+  const [enterpriseSeats, setEnterpriseSeats] = useState(5);
   const features = useT(FEATURES);
   const packages = useT(PACKAGES);
   const steps = useT(STEPS);
@@ -400,13 +412,20 @@ export default function Home() {
                 )}
                 <h3 className="text-sm font-semibold tracking-wide text-white">{pkg.name}</h3>
                 <p className="mt-1 text-xs text-zinc-500">{pkg.tagline}</p>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-white">
-                    {pkg.price}
-                    <span className="text-sm font-normal text-zinc-500">{pkg.period}</span>
-                  </span>
-                  {pkg.originalPrice && <span className="text-sm text-zinc-600 line-through">{pkg.originalPrice}</span>}
-                </div>
+
+                {pkg.highlight ? (
+                  <div className="mt-4">
+                    <EnterpriseSeatStepper seats={enterpriseSeats} onChange={setEnterpriseSeats} />
+                  </div>
+                ) : (
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="text-2xl font-semibold text-white">
+                      {pkg.price}
+                      <span className="text-sm font-normal text-zinc-500">{pkg.period}</span>
+                    </span>
+                    {pkg.originalPrice && <span className="text-sm text-zinc-600 line-through">{pkg.originalPrice}</span>}
+                  </div>
+                )}
 
                 <ul className="mt-6 flex-1 space-y-2 text-sm text-zinc-300">
                   {pkg.features.map((f) => (

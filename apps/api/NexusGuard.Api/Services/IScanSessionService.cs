@@ -24,6 +24,12 @@ public interface IScanSessionService
     /// only, so the search space is always small and short-lived.
     Task<(ScanSession Session, string ScanToken)?> ExchangePinOnlyAsync(string pin, CancellationToken ct = default);
 
+    /// Same lookup as ExchangePinOnlyAsync, but read-only - doesn't issue a scan token or move
+    /// the session out of Pending. Lets the download page tell a player their PIN is wrong
+    /// before they download anything, without burning the PIN they'll still need to actually
+    /// enter into Scanner.exe afterward.
+    Task<bool> IsPinValidAsync(string pin, CancellationToken ct = default);
+
     /// Resolves the ScanSession for a given bearer scan token, or null if invalid/expired.
     Task<ScanSession?> GetByScanTokenAsync(string scanToken, CancellationToken ct = default);
 

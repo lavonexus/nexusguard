@@ -95,6 +95,15 @@ public class ScanSessionService : IScanSessionService
         return (session, scanToken);
     }
 
+    public async Task<bool> IsPinValidAsync(string pin, CancellationToken ct = default)
+    {
+        var candidates = await _db.ScanSessions
+            .Where(s => s.Status == ScanSessionStatus.Pending && s.PinExpiresAt >= DateTime.UtcNow)
+            .ToListAsync(ct);
+
+        return candidates.Any(s => _tokens.Verify(pin, s.PinHash));
+    }
+
     public async Task<ScanSession?> GetByScanTokenAsync(string scanToken, CancellationToken ct = default)
     {
         var prefix = _tokens.Prefix(scanToken);

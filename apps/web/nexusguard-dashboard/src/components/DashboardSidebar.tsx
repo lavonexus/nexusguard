@@ -28,7 +28,7 @@ const MAIN_LINKS: Dict<{ href: string; label: string }[]> = {
 const PLAN_LABEL: Record<string, string> = {
   Free: "Free",
   Pro: "Pro",
-  ProDuo: "Pro Duo",
+  ProDuo: "Professional",
   Enterprise: "Enterprise",
 };
 

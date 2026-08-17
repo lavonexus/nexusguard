@@ -68,6 +68,20 @@ public class ScannerController : ControllerBase
         return new ScannerSessionResponse(scanToken, session.ScanTokenExpiresAt!.Value, theme);
     }
 
+    // Anonymous, read-only PIN check - lets the marketing site's download widget (and the
+    // download-scanner route itself) tell a player their PIN is wrong or expired before
+    // anything downloads, instead of handing out the exe regardless and letting Scanner.exe
+    // fail confusingly later. Never issues a token or touches the session's status.
+    [HttpGet("pin-check")]
+    [AllowAnonymous]
+    public async Task<ActionResult<PinCheckResponse>> CheckPin([FromQuery] string? pin)
+    {
+        if (pin is null || !System.Text.RegularExpressions.Regex.IsMatch(pin, @"^\d{6}$"))
+            return new PinCheckResponse(false);
+
+        return new PinCheckResponse(await _scanSessions.IsPinValidAsync(pin));
+    }
+
     [HttpPost("heartbeat")]
     [Authorize(AuthenticationSchemes = ScannerTokenAuthenticationOptions.SchemeName)]
     public async Task<IActionResult> Heartbeat()

@@ -37,6 +37,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // The server never trusts the client, including this download link itself - a manually
+  // typed PIN, a stale shared link, or someone poking the URL directly with random digits
+  // should all fail here rather than silently handing out an exe that Scanner.exe will only
+  // reject later once it actually tries to use the PIN.
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5080";
+  const checkRes = await fetch(`${apiBaseUrl}/api/scanner/pin-check?pin=${pin}`, { cache: "no-store" });
+  const { valid } = (await checkRes.json()) as { valid: boolean };
+  if (!valid) {
+    return NextResponse.json({ error: "Invalid or expired PIN." }, { status: 404 });
+  }
+
   const filePath = path.join(process.cwd(), "public", "downloads", "NexusGuard.Scanner.exe");
   const file = await readFile(filePath);
 
