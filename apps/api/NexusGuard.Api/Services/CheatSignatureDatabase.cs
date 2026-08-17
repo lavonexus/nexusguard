@@ -67,6 +67,22 @@ public static class CheatSignatureDatabase
             new[] { "fivemcleaner", "fivem cleaner", "fivem-cleaner", "gtacleaner", "gta cleaner",
                      "fivem trace", "gta trace", "fivem cache cleaner", "gta cache cleaner" },
             20, "Low"),
+
+        // --- HWID/identifier spoofers (ban evasion) - patterns kept multi-word/specific
+        // where possible, same reasoning as everywhere else in this file: a name match alone
+        // is weak, so the pattern itself should be unlikely to appear in unrelated software.
+        new("HWID/Identifier Spoofer", "SPOOFER",
+            new[] { "hwid spoof", "hwid-spoof", "hwidspoof", "hwid changer", "hwid-changer",
+                     "hwidchanger", "spoofer.exe", "spoofer.dll", "serial changer", "serial-changer",
+                     "volume serial changer", "disk serial changer", "macaddresschanger", "mac address changer" },
+            35, "Low"),
+
+        // --- Anti-cheat bypass tools (EAC/BattlEye) --------------------------------------
+        new("Anti-Cheat Bypass Tool", "BYPASS",
+            new[] { "eacbypass", "eac bypass", "eac-bypass", "battleyebypass", "battleye bypass",
+                     "battleye-bypass", "anticheatbypass", "anti-cheat bypass", "anti cheat bypass",
+                     "unlockeac", "unlock eac", "eacunlock", "bebypass" },
+            35, "Low"),
     };
 
     // Matches a lowercased haystack (filename, path, or display name) against every pattern in

@@ -91,17 +91,20 @@ public record InstalledApplicationFact(
     string DisplayName, string? Publisher, string? DisplayVersion, string? InstallLocation,
     DateTime? InstallDate, string? UninstallString, bool ExecutablePathExists);
 
-// Weak, informational-only UEFI/Secure Boot/TPM/firmware-boot-entry facts - never scored, same
+// Weak UEFI/Secure Boot/TPM/firmware-boot-entry facts, informational and never scored - same
 // treatment as UsbDeviceFact. Verifying the firmware image itself hasn't been tampered with
 // would need a kernel driver or a hardware SPI programmer, which this scanner deliberately
 // never uses (see the read-only guarantee) - these are just the handful of UEFI-adjacent facts
 // readable from user mode without one. Disabling Secure Boot has plenty of legitimate reasons
 // (Linux dual-boot, older hardware, a pending BIOS update) and is not itself evidence of
-// anything on its own.
+// anything on its own. TestSigningEnabled is the one field here the server does score (see
+// DetectionEngine.EvaluateFirmware) - it's the mechanism that lets Windows load an otherwise-
+// rejected unsigned x64 kernel driver, exactly what a driver-based HWID spoofer or anti-cheat
+// bypass needs.
 public record FirmwareFact(
     bool IsUefiBoot, bool? SecureBootEnabled,
     bool? TpmPresent, bool? TpmEnabled, bool? TpmActivated, string? TpmSpecVersion,
-    List<FirmwareBootEntry> BootEntries);
+    List<FirmwareBootEntry> BootEntries, bool? TestSigningEnabled);
 
 public record FirmwareBootEntry(string Identifier, string? Description, string? Path);
 

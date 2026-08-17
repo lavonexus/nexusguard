@@ -26,6 +26,8 @@ public class DetectionEngine : IDetectionEngine
         "cheatengine", "cheat engine", "x64dbg", "x32dbg", "ollydbg", "ida64", "ida ",
         "extreme injector", "xenos", "injector", "artmoney", "processhacker",
         "reclass", "dnspy",
+        "hwid spoof", "hwidspoof", "hwid changer", "hwidchanger", "spoofer",
+        "eacbypass", "eac bypass", "battleyebypass", "battleye bypass", "anticheatbypass",
     };
 
     private static readonly string[] FileNameFragments =
@@ -115,6 +117,8 @@ public class DetectionEngine : IDetectionEngine
                 ScanResultType.ScheduledTask => EvaluateScheduledTasks(scanSessionId, result.DataJson),
                 ScanResultType.Service => EvaluateServices(scanSessionId, result.DataJson),
                 ScanResultType.InstalledApplication => EvaluateInstalledApplications(scanSessionId, result.DataJson),
+                ScanResultType.Driver => EvaluateDrivers(scanSessionId, result.DataJson),
+                ScanResultType.Firmware => EvaluateFirmware(scanSessionId, result.DataJson),
                 _ => Enumerable.Empty<Detection>(),
             });
         }
@@ -503,6 +507,73 @@ public class DetectionEngine : IDetectionEngine
         return detections;
     }
 
+    // Kernel drivers - name/hash signals same as everywhere else, plus one this fact type alone
+    // can offer: a real, WinVerifyTrust-checked trust verdict. Windows itself refuses to load an
+    // unsigned x64 kernel driver without Test Mode or a disabled Secure Boot, so a driver outside
+    // the Windows directory (SignatureTrust is only ever populated there - see
+    // FileMetadataInspector's catalog-signing skip rule) with no valid signature is meaningfully
+    // unusual on its own, not just when a name also matches.
+    private static List<Detection> EvaluateDrivers(Guid sessionId, string dataJson)
+    {
+        var detections = new List<Detection>();
+        foreach (var fact in Deserialize<DriverFact>(dataJson))
+        {
+            var sig = CheatSignatureDatabase.Match(fact.Name)
+                ?? CheatSignatureDatabase.Match(fact.DisplayName)
+                ?? (fact.PathName is not null ? CheatSignatureDatabase.Match(fact.PathName) : null);
+            var untrusted = fact.SignatureTrust is not (null or "Trusted");
+
+            if (sig is not null)
+            {
+                var confidence = untrusted ? BumpConfidence(sig.BaseConfidence) : sig.BaseConfidence;
+                detections.Add(NewDetection(
+                    sessionId, $"driver:{sig.Category.ToLowerInvariant()}", sig.BaseWeight,
+                    $"Sürücü '{fact.Name}' ({fact.State}) bilinen imza '{sig.Name}' ile eşleşiyor.",
+                    fact.PathName ?? fact.Name, category: sig.Category, confidence: confidence,
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
+                continue;
+            }
+
+            if (fact.SignatureTrust is "Revoked" or "Tampered" or "Distrusted")
+            {
+                detections.Add(NewDetection(
+                    sessionId, "driver-untrusted-signature", 30,
+                    $"Sürücü '{fact.Name}' ({fact.State}) geçersiz/iptal edilmiş bir imzaya sahip (durum: {fact.SignatureTrust}).",
+                    fact.PathName ?? fact.Name, category: "SUSPICIOUS DRIVER", confidence: "Medium",
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
+            }
+            else if (fact.SignatureTrust == "NoSignature")
+            {
+                detections.Add(NewDetection(
+                    sessionId, "driver-unsigned", 20,
+                    $"Sürücü '{fact.Name}' ({fact.State}) hiç dijital imza taşımıyor - Windows normalde x64 çekirdek sürücülerini Test Modu veya devre dışı Secure Boot olmadan yüklemez.",
+                    fact.PathName ?? fact.Name, category: "SUSPICIOUS DRIVER", confidence: "Low",
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
+            }
+        }
+        return detections;
+    }
+
+    // Test Signing Mode is the mechanism that lets Windows load an otherwise-rejected unsigned
+    // x64 kernel driver - exactly what a driver-based HWID spoofer or an EAC/BattlEye bypass
+    // needs. Enabling it is a deliberate, unusual step almost no ordinary player takes, but it's
+    // not inherently malicious on its own (driver developers use it too) - Low confidence,
+    // same "context not accusation" treatment as everything else here.
+    private static List<Detection> EvaluateFirmware(Guid sessionId, string dataJson)
+    {
+        var detections = new List<Detection>();
+        foreach (var fact in Deserialize<FirmwareFact>(dataJson))
+        {
+            if (fact.TestSigningEnabled != true) continue;
+
+            detections.Add(NewDetection(
+                sessionId, "test-signing-enabled", 20,
+                "Windows Test Signing Modu etkin - bu, normalde reddedilecek imzasız çekirdek sürücülerinin yüklenmesine izin verir (HWID spoofer'lar ve anti-cheat bypass araçlarının kullandığı yaygın bir yöntem).",
+                "Test Signing Mode", category: "BYPASS", confidence: "Low"));
+        }
+        return detections;
+    }
+
     // Runs after every fact type has been evaluated, over the whole in-memory batch - two
     // independent scanners agreeing (a Lua artifact next to a suspicious binary in the same
     // folder, or several different suspicious categories firing while FiveM was actually
@@ -526,7 +597,8 @@ public class DetectionEngine : IDetectionEngine
 
         if (!fiveMRunning) return;
 
-        var suspiciousCategories = new HashSet<string> { "CHEAT", "INJECTOR", "LOADER", "MAPPER", "SUSPICIOUS DLL", "SUSPICIOUS DRIVER" };
+        var suspiciousCategories = new HashSet<string>
+            { "CHEAT", "INJECTOR", "LOADER", "MAPPER", "SUSPICIOUS DLL", "SUSPICIOUS DRIVER", "SPOOFER", "BYPASS" };
         var distinctCategoriesPresent = detections
             .Select(d => d.Category)
             .Where(suspiciousCategories.Contains)
@@ -585,4 +657,8 @@ public class DetectionEngine : IDetectionEngine
     private record SystemFact(
         string OsVersion, string MachineName, bool FiveMProcessFound,
         DateTime? WindowsInstallDate, string? RegionCountry);
+    private record DriverFact(
+        string Name, string DisplayName, string State, string? PathName, string? Sha256,
+        bool Signed, string? Publisher, string? SignatureTrust);
+    private record FirmwareFact(bool? TestSigningEnabled);
 }

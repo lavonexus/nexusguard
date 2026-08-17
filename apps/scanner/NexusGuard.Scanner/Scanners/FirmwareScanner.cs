@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -17,8 +18,9 @@ public static class FirmwareScanner
         var (isUefi, secureBoot) = ReadSecureBootState();
         var (tpmPresent, tpmEnabled, tpmActivated, tpmSpec) = ReadTpmState();
         var bootEntries = ReadFirmwareBootEntries();
+        var testSigning = ReadTestSigningState();
 
-        return new FirmwareFact(isUefi, secureBoot, tpmPresent, tpmEnabled, tpmActivated, tpmSpec, bootEntries);
+        return new FirmwareFact(isUefi, secureBoot, tpmPresent, tpmEnabled, tpmActivated, tpmSpec, bootEntries, testSigning);
     }
 
     // The SecureBoot\State key only exists at all on a UEFI system (Legacy BIOS has no such
@@ -111,5 +113,52 @@ public static class FirmwareScanner
         }
 
         return entries;
+    }
+
+    // bcdedit /enum {current} (the actual boot-loader entry, unlike /enum firmware above)
+    // needs admin rights to open the BCD store - confirmed empirically ("access denied" from a
+    // normal user token) - so Test Signing state is read the way tools like System Informer do
+    // instead: a direct NtQuerySystemInformation(SystemCodeIntegrityInformation) call, which is
+    // readable from any user-mode process. CODEINTEGRITY_OPTION_TESTSIGN (bit 0x2) is the flag
+    // Windows itself uses internally to decide whether to allow an unsigned kernel driver to
+    // load - confirmed against this machine's own known-off state (struct size echoed back
+    // correctly, TESTSIGN bit correctly 0).
+    private const int SystemCodeIntegrityInformation = 103;
+    private const uint CodeIntegrityOptionTestSign = 0x02;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SYSTEM_CODEINTEGRITY_INFORMATION
+    {
+        public uint Length;
+        public uint CodeIntegrityOptions;
+    }
+
+    [DllImport("ntdll.dll")]
+    private static extern int NtQuerySystemInformation(
+        int systemInformationClass, IntPtr systemInformation, int systemInformationLength, out int returnLength);
+
+    private static bool? ReadTestSigningState()
+    {
+        var size = Marshal.SizeOf<SYSTEM_CODEINTEGRITY_INFORMATION>();
+        var buffer = IntPtr.Zero;
+        try
+        {
+            buffer = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(new SYSTEM_CODEINTEGRITY_INFORMATION { Length = (uint)size }, buffer, false);
+
+            var status = NtQuerySystemInformation(SystemCodeIntegrityInformation, buffer, size, out _);
+            if (status != 0) return null;
+
+            var info = Marshal.PtrToStructure<SYSTEM_CODEINTEGRITY_INFORMATION>(buffer);
+            return (info.CodeIntegrityOptions & CodeIntegrityOptionTestSign) != 0;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            if (buffer != IntPtr.Zero) Marshal.FreeHGlobal(buffer);
+        }
     }
 }
