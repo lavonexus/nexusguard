@@ -73,13 +73,45 @@ public class ScansController : ControllerBase
     {
         var serverId = CallerServerId();
 
-        var sessions = await _db.ScanSessions
-            .Where(s => s.ServerId == serverId)
+        var query = _db.ScanSessions
+            .Include(s => s.CreatedByUser)
+            .Where(s => s.ServerId == serverId);
+
+        var restrictToCallerId = await ResolveVisibilityRestrictionAsync(serverId);
+        if (restrictToCallerId.HasValue)
+            query = query.Where(s => s.CreatedByUserId == restrictToCallerId.Value);
+
+        var sessions = await query
             .OrderByDescending(s => s.CreatedAt)
             .Take(100)
             .ToListAsync();
 
         return sessions.Select(ToResponse).ToList();
+    }
+
+    // Enterprise-only restriction: a plain Member (not the Owner, not a Manager) only sees
+    // scans they created themselves, unless the owner has widened this via
+    // Server.ShowAllScansToMembers (see /team/settings). Returns the caller's own user id to
+    // filter by, or null if no restriction applies (Owner, Manager, non-Enterprise plan, or no
+    // resolvable session identity at all - e.g. a bare API-key call with no session cookie).
+    private async Task<Guid?> ResolveVisibilityRestrictionAsync(Guid serverId)
+    {
+        var sessionAuth = await HttpContext.AuthenticateAsync(DashboardSessionAuthenticationOptions.SchemeName);
+        if (!Guid.TryParse(sessionAuth.Principal?.FindFirst(DashboardSessionClaimTypes.UserId)?.Value, out var callerId))
+            return null;
+
+        var server = await _db.Servers.FindAsync(serverId);
+        if (server is null || server.EffectivePlan != "Enterprise" || server.ShowAllScansToMembers)
+            return null;
+
+        if (callerId == server.OwnerUserId)
+            return null;
+
+        var member = await _db.ServerMembers.FirstOrDefaultAsync(m => m.ServerId == serverId && m.UserId == callerId);
+        if (member is null || member.Role == "Manager")
+            return null;
+
+        return callerId;
     }
 
     [HttpGet("{id:guid}")]
@@ -90,6 +122,7 @@ public class ScansController : ControllerBase
         var session = await _db.ScanSessions
             .Include(s => s.Results)
             .Include(s => s.Detections)
+            .Include(s => s.CreatedByUser)
             .FirstOrDefaultAsync(s => s.Id == id && s.ServerId == serverId);
 
         if (session is null) return NotFound();
@@ -114,5 +147,6 @@ public class ScansController : ControllerBase
 
     private static ScanSessionResponse ToResponse(ScanSession s) => new(
         s.Id, s.PlayerIdentifier, s.Status.ToString(), s.RiskScore, s.AiSummary, s.CreatedAt, s.StartedAt, s.CompletedAt,
-        s.DiscordUserId, s.DiscordUsername, s.DiscordAvatarUrl, s.SteamId64, s.SteamUsername, s.SteamAvatarUrl);
+        s.DiscordUserId, s.DiscordUsername, s.DiscordAvatarUrl, s.SteamId64, s.SteamUsername, s.SteamAvatarUrl,
+        s.CreatedByUser?.Username);
 }

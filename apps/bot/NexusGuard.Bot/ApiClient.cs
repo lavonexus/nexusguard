@@ -33,11 +33,16 @@ public class ApiClient
     }
 
     public async Task<CreateScanResult> CreateScanAsync(
-        ulong guildId, string? playerIdentifier, ulong discordUserId, string discordUsername, string? discordAvatarUrl)
+        ulong guildId, string? playerIdentifier, ulong discordUserId, string discordUsername, string? discordAvatarUrl,
+        ulong? invokerDiscordUserId = null)
     {
         var res = await _http.PostAsJsonAsync(
             "/api/discord/scans",
-            new { guildId, playerIdentifier, discordUserId = discordUserId.ToString(), discordUsername, discordAvatarUrl },
+            new
+            {
+                guildId, playerIdentifier, discordUserId = discordUserId.ToString(), discordUsername, discordAvatarUrl,
+                invokerDiscordUserId = invokerDiscordUserId?.ToString(),
+            },
             JsonOptions);
 
         if (!res.IsSuccessStatusCode)

@@ -81,6 +81,9 @@ export interface ServerResponse {
   enterpriseSeats: number | null;
   planExpiresAt: string | null;
   needsSetup: boolean;
+  discordUrl: string | null;
+  showAllScansToMembers: boolean;
+  logoUrl: string | null;
 }
 
 export interface ServerMemberResponse {
@@ -89,6 +92,8 @@ export interface ServerMemberResponse {
   username: string;
   role: string;
   addedAt: string;
+  scanCount: number;
+  lastActiveAt: string | null;
 }
 
 export interface MyServerResponse extends ServerResponse {
@@ -132,6 +137,9 @@ export interface ScanSessionResponse {
   steamId64: string | null;
   steamUsername: string | null;
   steamAvatarUrl: string | null;
+  // Who ran this scan (dashboard "New scan" or /nexusguard-scan) - null if the creator was
+  // never resolved to a NexusGuard account. Never the scanned player - see discordUsername.
+  createdByUsername: string | null;
 }
 
 export interface ScanResultSummaryResponse {
@@ -188,6 +196,35 @@ export interface CreateScanResponse {
   pinExpiresAt: string;
 }
 
+export interface DailyScanCount {
+  date: string;
+  count: number;
+}
+
+export interface DecisionBucketCount {
+  decision: string;
+  count: number;
+}
+
+export interface RecentScanSummary {
+  id: string;
+  playerIdentifier: string;
+  decision: string;
+  createdByUsername: string | null;
+  createdAt: string;
+}
+
+export interface ServerOverviewResponse {
+  memberCount: number;
+  seats: number | null;
+  totalScans: number;
+  detectionCount: number;
+  detectionRatePercent: number;
+  activitySeries: DailyScanCount[];
+  decisionBuckets: DecisionBucketCount[];
+  recentActivity: RecentScanSummary[];
+}
+
 export function createUser(username: string, email: string) {
   return request<UserResponse>("/api/users", {
     method: "POST",
@@ -212,6 +249,26 @@ export function createServerForCurrentUser(name: string) {
 export function getServer(apiKey: string, id: string) {
   return request<ServerResponse>(`/api/servers/${id}`, {
     headers: { "X-Api-Key": apiKey },
+  });
+}
+
+// Kurumsal > Genel Bakış. Owner/Manager/Member-readable - aggregates are always workspace-wide,
+// only the recentActivity list respects the per-member scan-visibility setting.
+export function getServerOverview(apiKey: string, id: string) {
+  return request<ServerOverviewResponse>(`/api/servers/${id}/overview`, {
+    headers: { "X-Api-Key": apiKey },
+  });
+}
+
+// Kurumsal > Ayarlar. Owner-only server-side (session-authenticated, same reasoning as
+// setMemberRole - the shared API key can't identify which individual member is calling).
+export function updateServerSettings(
+  id: string,
+  settings: { discordUrl: string | null; showAllScansToMembers: boolean; logoUrl: string | null }
+) {
+  return sessionRequest<ServerResponse>(`/api/servers/${id}/settings`, {
+    method: "PUT",
+    body: JSON.stringify(settings),
   });
 }
 

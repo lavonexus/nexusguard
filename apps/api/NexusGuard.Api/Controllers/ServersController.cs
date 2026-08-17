@@ -84,6 +84,24 @@ public class ServersController : ControllerBase
         return ToServerResponse(server);
     }
 
+    // Kurumsal > Ayarlar (Discord URL, scan-visibility toggle, branding logo URL). Owner-only,
+    // same reasoning as SetMemberRole - not delegable to a Manager.
+    [HttpPut("{id:guid}/settings")]
+    [Authorize(AuthenticationSchemes = DashboardSessionAuthenticationOptions.SchemeName)]
+    public async Task<ActionResult<ServerResponse>> UpdateSettings(Guid id, UpdateServerSettingsRequest request)
+    {
+        var server = await _db.Servers.FindAsync(id);
+        if (server is null) return NotFound();
+        if (!await CallerIsOwnerBySessionAsync(server)) return StatusCode(StatusCodes.Status403Forbidden);
+
+        server.DiscordUrl = string.IsNullOrWhiteSpace(request.DiscordUrl) ? null : request.DiscordUrl.Trim();
+        server.LogoUrl = string.IsNullOrWhiteSpace(request.LogoUrl) ? null : request.LogoUrl.Trim();
+        server.ShowAllScansToMembers = request.ShowAllScansToMembers;
+        await _db.SaveChangesAsync();
+
+        return ToServerResponse(server);
+    }
+
     // Every server the logged-in Discord/Google user owns OR is a team member of - lets the
     // dashboard show servers whose API key isn't sitting in this browser's local storage
     // (a different machine, one created before this login existed, or one someone else owns
@@ -125,6 +143,90 @@ public class ServersController : ControllerBase
         return ToServerResponse(server);
     }
 
+    // Kurumsal > Genel Bakış. Aggregates are always workspace-wide (visible to every member
+    // regardless of the scan-visibility toggle - a total count isn't the same privacy concern
+    // as a list of individual scans), but RecentActivity is a list of individual scans, so it
+    // respects the same per-member restriction as GET /api/scans.
+    [HttpGet("{id:guid}/overview")]
+    [Authorize(AuthenticationSchemes = OwnerSchemes)]
+    public async Task<ActionResult<ServerOverviewResponse>> Overview(Guid id)
+    {
+        var server = await _db.Servers.FindAsync(id);
+        if (server is null) return NotFound();
+        if (!await CallerCanAccessServerAsync(server)) return Forbid();
+
+        var memberCount = 1 + await _db.ServerMembers.CountAsync(m => m.ServerId == id); // +1 for the owner
+
+        var totalScans = await _db.ScanSessions.CountAsync(s => s.ServerId == id);
+        var completed = _db.ScanSessions.Where(s => s.ServerId == id && s.Status == ScanSessionStatus.Completed);
+        var hileCount = await completed.CountAsync(s => s.RiskScore >= 60);
+        var uyariCount = await completed.CountAsync(s => s.RiskScore >= 25 && s.RiskScore < 60);
+        var temizCount = await completed.CountAsync(s => s.RiskScore < 25);
+        var calisiyorCount = totalScans - hileCount - uyariCount - temizCount;
+
+        var detectionRate = totalScans > 0 ? hileCount * 100.0 / totalScans : 0.0;
+
+        var since = DateTime.UtcNow.Date.AddDays(-29);
+        var dailyRows = await _db.ScanSessions
+            .Where(s => s.ServerId == id && s.CreatedAt >= since)
+            .GroupBy(s => s.CreatedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync();
+        var dailyLookup = dailyRows.ToDictionary(r => DateOnly.FromDateTime(r.Date), r => r.Count);
+        var activitySeries = Enumerable.Range(0, 30)
+            .Select(i => DateOnly.FromDateTime(since.AddDays(i)))
+            .Select(d => new DailyScanCount(d, dailyLookup.GetValueOrDefault(d)))
+            .ToList();
+
+        var restrictToCallerId = await ResolveScanVisibilityRestrictionAsync(server);
+        var recentQuery = _db.ScanSessions.Include(s => s.CreatedByUser).Where(s => s.ServerId == id);
+        if (restrictToCallerId.HasValue)
+            recentQuery = recentQuery.Where(s => s.CreatedByUserId == restrictToCallerId.Value);
+        var recent = await recentQuery.OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync();
+        var recentActivity = recent.Select(s => new RecentScanSummary(
+            s.Id, s.PlayerIdentifier, DecisionOf(s.Status, s.RiskScore), s.CreatedByUser?.Username, s.CreatedAt)).ToList();
+
+        var decisionBuckets = new List<DecisionBucketCount>
+        {
+            new("Temiz", temizCount),
+            new("Uyarı", uyariCount),
+            new("Hile", hileCount),
+            new("Çalışıyor", calisiyorCount),
+        };
+
+        return new ServerOverviewResponse(
+            memberCount, server.EnterpriseSeats, totalScans, hileCount, detectionRate,
+            activitySeries, decisionBuckets, recentActivity);
+    }
+
+    // Mirrors lib/riskBuckets.ts's decisionOf exactly - the dashboard's donut/leaderboard/scan
+    // table and this endpoint must always agree on what counts as a detection.
+    private static string DecisionOf(ScanSessionStatus status, int? riskScore)
+    {
+        if (status != ScanSessionStatus.Completed) return "Çalışıyor";
+        if (riskScore >= 60) return "Hile";
+        if (riskScore >= 25) return "Uyarı";
+        return "Temiz";
+    }
+
+    // Same rule as ScansController.List's visibility restriction (a plain Member only sees
+    // scans they created, unless the owner has widened this) - duplicated rather than shared
+    // since it's ~10 lines and each controller already resolves its own caller/server context
+    // differently (this one already has `server` loaded; ScansController resolves it from the
+    // API-key claim instead).
+    private async Task<Guid?> ResolveScanVisibilityRestrictionAsync(Server server)
+    {
+        var callerId = await ResolveSessionUserIdAsync();
+        if (!callerId.HasValue) return null;
+        if (server.EffectivePlan != "Enterprise" || server.ShowAllScansToMembers) return null;
+        if (callerId.Value == server.OwnerUserId) return null;
+
+        var member = await _db.ServerMembers.FirstOrDefaultAsync(m => m.ServerId == server.Id && m.UserId == callerId.Value);
+        if (member is null || member.Role == "Manager") return null;
+
+        return callerId;
+    }
+
     // Enterprise-only: teammates beyond the owner. Added by their NexusGuard Discord username,
     // so they must have signed in at least once already (that's how Users rows get created).
     [HttpGet("{id:guid}/members")]
@@ -142,13 +244,36 @@ public class ServersController : ControllerBase
             .OrderBy(m => m.AddedAt)
             .ToListAsync();
 
+        var scanStats = await ScanStatsByUserAsync(id);
+
         var result = new List<ServerMemberResponse>();
         if (owner is not null)
-            result.Add(new ServerMemberResponse(owner.Id, owner.Id, owner.Username, "Owner", server.CreatedAt));
+        {
+            var (ownerCount, ownerLastActive) = scanStats.TryGetValue(owner.Id, out var os) ? os : (0, (DateTime?)null);
+            result.Add(new ServerMemberResponse(owner.Id, owner.Id, owner.Username, "Owner", server.CreatedAt, ownerCount, ownerLastActive));
+        }
         result.AddRange(members.Select(m =>
-            new ServerMemberResponse(m.Id, m.UserId, m.User?.Username ?? "(unknown)", m.Role, m.AddedAt)));
+        {
+            var (count, lastActive) = scanStats.TryGetValue(m.UserId, out var s) ? s : (0, (DateTime?)null);
+            return new ServerMemberResponse(m.Id, m.UserId, m.User?.Username ?? "(unknown)", m.Role, m.AddedAt, count, lastActive);
+        }));
 
         return result;
+    }
+
+    // Scan count + most recent scan timestamp per creator, scoped to this server - shared by
+    // ListMembers (per-row stats) and Overview (workspace-wide aggregates). Only ever counts
+    // scans where CreatedByUserId resolved (see ScanSessionService/DiscordBotController) -
+    // scans with no resolvable creator simply don't count toward anyone's personal total.
+    private async Task<Dictionary<Guid, (int Count, DateTime? LastActive)>> ScanStatsByUserAsync(Guid serverId)
+    {
+        var rows = await _db.ScanSessions
+            .Where(s => s.ServerId == serverId && s.CreatedByUserId != null)
+            .GroupBy(s => s.CreatedByUserId!.Value)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActive = g.Max(s => s.CreatedAt) })
+            .ToListAsync();
+
+        return rows.ToDictionary(r => r.UserId, r => (r.Count, (DateTime?)r.LastActive));
     }
 
     [HttpPost("{id:guid}/members")]
@@ -212,7 +337,7 @@ public class ServersController : ControllerBase
         _db.ServerMembers.Add(member);
         await _db.SaveChangesAsync();
 
-        return new ServerMemberResponse(member.Id, user.Id, user.Username, member.Role, member.AddedAt);
+        return new ServerMemberResponse(member.Id, user.Id, user.Username, member.Role, member.AddedAt, 0, null);
     }
 
     [HttpDelete("{id:guid}/members/{memberId:guid}")]
@@ -251,7 +376,10 @@ public class ServersController : ControllerBase
         member.Role = request.Role;
         await _db.SaveChangesAsync();
 
-        return new ServerMemberResponse(member.Id, member.UserId, member.User?.Username ?? "(unknown)", member.Role, member.AddedAt);
+        var scanStats = await ScanStatsByUserAsync(id);
+        var (count, lastActive) = scanStats.TryGetValue(member.UserId, out var s) ? s : (0, (DateTime?)null);
+
+        return new ServerMemberResponse(member.Id, member.UserId, member.User?.Username ?? "(unknown)", member.Role, member.AddedAt, count, lastActive);
     }
 
     // Scanner.exe theming - colors/labels/logo/watermark the player sees while a scan runs.
@@ -315,7 +443,8 @@ public class ServersController : ControllerBase
 
     private static ServerResponse ToServerResponse(Server server) => new(
         server.Id, server.Name, server.CreatedAt, server.IsActive,
-        server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt, server.NeedsSetup);
+        server.EffectivePlan, server.EnterpriseSeats, server.PlanExpiresAt, server.NeedsSetup,
+        server.DiscordUrl, server.ShowAllScansToMembers, server.LogoUrl);
 
     private static MyServerResponse ToMyServerResponse(Server server, string role) => new(
         server.Id, server.Name, server.CreatedAt, server.IsActive,

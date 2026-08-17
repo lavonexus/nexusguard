@@ -67,8 +67,18 @@ public class DiscordBotController : ControllerBase
         var server = await _db.Servers.FindAsync(link.ServerId);
         if (server is null || !server.IsActive) return BadRequest("The linked NexusGuard server is no longer active.");
 
+        // Opportunistic, like the dashboard's own "New scan" attribution - only resolves if the
+        // admin who ran the slash command has signed into NexusGuard with that Discord account
+        // at least once. Never blocks scan creation if it doesn't resolve.
+        Guid? createdByUserId = null;
+        if (!string.IsNullOrWhiteSpace(request.InvokerDiscordUserId))
+        {
+            var invoker = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == request.InvokerDiscordUserId);
+            createdByUserId = invoker?.Id;
+        }
+
         var (session, pin) = await _scanSessions.CreateAsync(
-            server.Id, request.PlayerIdentifier, createdByUserId: null,
+            server.Id, request.PlayerIdentifier, createdByUserId,
             discordUserId: request.DiscordUserId, discordUsername: request.DiscordUsername,
             discordAvatarUrl: request.DiscordAvatarUrl);
 

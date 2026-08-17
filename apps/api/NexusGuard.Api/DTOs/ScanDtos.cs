@@ -23,7 +23,11 @@ public record ScanSessionResponse(
     string? DiscordAvatarUrl,
     string? SteamId64,
     string? SteamUsername,
-    string? SteamAvatarUrl);
+    string? SteamAvatarUrl,
+    // Who ran this scan (dashboard "New scan" or /nexusguard-scan) - null if the creator was
+    // never resolved to a NexusGuard account (a bare API-key call, or a Discord admin who's
+    // never signed into the dashboard). Never the scanned player - see DiscordUserId for that.
+    string? CreatedByUsername);
 
 public record ScanResultSummaryResponse(Guid Id, string ResultType, string DataJson, DateTime CreatedAt);
 

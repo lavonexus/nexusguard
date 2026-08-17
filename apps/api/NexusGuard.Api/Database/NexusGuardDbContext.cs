@@ -40,6 +40,9 @@ public class NexusGuardDbContext : DbContext
             e.Property(s => s.Name).IsRequired().HasMaxLength(128);
             e.Property(s => s.Plan).IsRequired().HasMaxLength(16).HasDefaultValue("Free");
             e.Property(s => s.NeedsSetup).HasDefaultValue(false);
+            e.Property(s => s.DiscordUrl).HasMaxLength(256);
+            e.Property(s => s.ShowAllScansToMembers).HasDefaultValue(false);
+            e.Property(s => s.LogoUrl).HasMaxLength(256);
             e.HasOne(s => s.Owner)
                 .WithMany(u => u.Servers)
                 .HasForeignKey(s => s.OwnerUserId)

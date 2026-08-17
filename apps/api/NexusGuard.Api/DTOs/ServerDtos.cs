@@ -12,9 +12,12 @@ public record RotateApiKeyResponse(string ApiKey);
 
 public record ServerResponse(
     Guid Id, string Name, DateTime CreatedAt, bool IsActive,
-    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt, bool NeedsSetup);
+    string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt, bool NeedsSetup,
+    string? DiscordUrl, bool ShowAllScansToMembers, string? LogoUrl);
 
-public record ServerMemberResponse(Guid Id, Guid UserId, string Username, string Role, DateTime AddedAt);
+public record ServerMemberResponse(
+    Guid Id, Guid UserId, string Username, string Role, DateTime AddedAt,
+    int ScanCount, DateTime? LastActiveAt);
 
 // A Discord username, a Discord ID, or (for Google-only accounts) the email they registered
 // with - see ServersController.AddMember for how the three are told apart.
@@ -32,4 +35,22 @@ public record MyServerResponse(
     string Plan, int? EnterpriseSeats, DateTime? PlanExpiresAt, bool NeedsSetup, string Role);
 
 public record RenameServerRequest(string Name);
+
+// Owner-only (see ServersController.UpdateSettings). DiscordUrl/LogoUrl are freeform,
+// unvalidated strings, same as Name - null/blank clears the field.
+public record UpdateServerSettingsRequest(string? DiscordUrl, bool ShowAllScansToMembers, string? LogoUrl);
+
+public record ServerOverviewResponse(
+    int MemberCount, int? Seats,
+    int TotalScans, int DetectionCount, double DetectionRatePercent,
+    List<DailyScanCount> ActivitySeries,
+    List<DecisionBucketCount> DecisionBuckets,
+    List<RecentScanSummary> RecentActivity);
+
+public record DailyScanCount(DateOnly Date, int Count);
+
+public record DecisionBucketCount(string Decision, int Count);
+
+public record RecentScanSummary(
+    Guid Id, string PlayerIdentifier, string Decision, string? CreatedByUsername, DateTime CreatedAt);
 

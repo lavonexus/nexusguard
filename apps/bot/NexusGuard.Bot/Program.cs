@@ -163,7 +163,8 @@ async Task HandleScanAsync(SocketSlashCommand command)
     {
         scan = await api.CreateScanAsync(
             guildId.Value, targetUser.Username, targetUser.Id, targetUser.Username,
-            targetUser.GetDisplayAvatarUrl() ?? targetUser.GetDefaultAvatarUrl());
+            targetUser.GetDisplayAvatarUrl() ?? targetUser.GetDefaultAvatarUrl(),
+            command.User.Id);
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("isn't linked yet"))
     {

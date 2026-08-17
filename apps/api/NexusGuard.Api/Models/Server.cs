@@ -39,6 +39,17 @@ public class Server
     // they rename (or otherwise confirm) via PATCH /api/servers/{id}.
     public bool NeedsSetup { get; set; } = false;
 
+    // Enterprise workspace settings (Kurumsal > Ayarlar) - owner-only to edit, via
+    // PUT /api/servers/{id}/settings. Freeform, no format validation, same as Name.
+    public string? DiscordUrl { get; set; }
+
+    // Default is restrictive: a plain Member only sees scans they created themselves (see
+    // ScansController.List). The owner can widen this per-workspace instead of per-member.
+    public bool ShowAllScansToMembers { get; set; } = false;
+
+    // Stored only for now - not yet rendered on /scans/[id] result pages (separate follow-up).
+    public string? LogoUrl { get; set; }
+
     // Not mapped (no setter) - EF Core skips read-only properties by convention. Every plan
     // check in the codebase should read this, never Plan directly, so an expired grant can't
     // be missed anywhere.

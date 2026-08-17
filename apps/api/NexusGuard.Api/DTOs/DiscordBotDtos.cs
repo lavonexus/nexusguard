@@ -8,6 +8,9 @@ public record LinkGuildRequest(string ApiKey, long GuildId);
 
 // discordUserId/Username/AvatarUrl come straight from Discord's own API as a normal part of
 // the admin running /nexusguard-scan @user in their Discord client - not read from the
-// scanned player's machine.
+// scanned player's machine. These three describe the TARGET being scanned - InvokerDiscordUserId
+// is a separate identity: whoever ran the slash command, used only for "who scanned this"
+// attribution (see DiscordBotController.CreateScan), never shown to the scanned player.
 public record CreateBotScanRequest(
-    long GuildId, string? PlayerIdentifier, string DiscordUserId, string DiscordUsername, string? DiscordAvatarUrl);
+    long GuildId, string? PlayerIdentifier, string DiscordUserId, string DiscordUsername, string? DiscordAvatarUrl,
+    string? InvokerDiscordUserId = null);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
@@ -15,13 +16,26 @@ const MAIN_LINKS: Dict<{ href: string; label: string }[]> = {
     { href: "/overview", label: "Genel Bakış" },
     { href: "/scans", label: "Tarama Geçmişi" },
     { href: "/leaderboard", label: "Lider Tablosu" },
-    { href: "/team", label: "Kurumsal" },
   ],
   en: [
     { href: "/overview", label: "Overview" },
     { href: "/scans", label: "Scan History" },
     { href: "/leaderboard", label: "Leaderboard" },
-    { href: "/team", label: "Enterprise" },
+  ],
+};
+
+const TEAM_LINKS: Dict<{ href: string; label: string }[]> = {
+  tr: [
+    { href: "/team", label: "Genel Bakış" },
+    { href: "/team/members", label: "Üyeler" },
+    { href: "/team/scans", label: "Taramalar" },
+    { href: "/team/settings", label: "Ayarlar" },
+  ],
+  en: [
+    { href: "/team", label: "Overview" },
+    { href: "/team/members", label: "Members" },
+    { href: "/team/scans", label: "Scans" },
+    { href: "/team/settings", label: "Settings" },
   ],
 };
 
@@ -38,6 +52,7 @@ const STRINGS: Dict<{
   sectionOther: string;
   sectionSupport: string;
   sectionAdmin: string;
+  teamGroupLabel: string;
   marketplace: string;
   settings: string;
   tickets: string;
@@ -56,6 +71,7 @@ const STRINGS: Dict<{
     sectionOther: "Diğer",
     sectionSupport: "Destek",
     sectionAdmin: "Yönetim",
+    teamGroupLabel: "Kurumsal",
     marketplace: "Mağaza",
     settings: "Ayarlar",
     tickets: "Biletlerim",
@@ -74,6 +90,7 @@ const STRINGS: Dict<{
     sectionOther: "Other",
     sectionSupport: "Support",
     sectionAdmin: "Admin",
+    teamGroupLabel: "Enterprise",
     marketplace: "Marketplace",
     settings: "Settings",
     tickets: "My Tickets",
@@ -94,7 +111,14 @@ export default function DashboardSidebar() {
   const { session, server, user } = useServerContext();
   const { locale } = useLocale();
   const mainLinks = useT(MAIN_LINKS);
+  const teamLinks = useT(TEAM_LINKS);
   const t = useT(STRINGS);
+
+  const teamGroupActive = pathname === "/team" || pathname.startsWith("/team/");
+  const [teamGroupOpen, setTeamGroupOpen] = useState(teamGroupActive);
+  useEffect(() => {
+    if (teamGroupActive) setTeamGroupOpen(true);
+  }, [teamGroupActive]);
 
   async function handleLogout() {
     clearSession();
@@ -141,14 +165,51 @@ export default function DashboardSidebar() {
                 }`}
               >
                 {link.label}
-                {link.href === "/team" && plan !== "Enterprise" && (
+              </Link>
+            );
+          })}
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setTeamGroupOpen((v) => !v)}
+              className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
+                teamGroupActive ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <TeamIcon className="h-4 w-4 shrink-0" />
+                {t.teamGroupLabel}
+              </span>
+              <span className="flex items-center gap-1.5">
+                {plan !== "Enterprise" && (
                   <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
                     {t.proBadge}
                   </span>
                 )}
-              </Link>
-            );
-          })}
+                <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${teamGroupOpen ? "rotate-90" : ""}`} />
+              </span>
+            </button>
+
+            {teamGroupOpen && (
+              <div className="mt-0.5 space-y-0.5 border-l border-violet-950/60 pl-3">
+                {teamLinks.map((link) => {
+                  const active = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`block rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                        active ? "bg-violet-500/10 text-white ring-1 ring-inset ring-violet-500/20" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 px-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">{t.sectionTools}</div>
@@ -277,6 +338,24 @@ export default function DashboardSidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+function TeamIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
   );
 }
 
