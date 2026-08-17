@@ -21,15 +21,23 @@ public static class FiveMArtifactScanner
         var pluginsDir = Path.Combine(FiveMDataDirectory, "plugins");
         foreach (var file in SafeEnumerate(pluginsDir, "*.dll"))
         {
-            facts.Add(new FiveMArtifactFact(Path.GetFileName(file), file, InPluginsDir: true));
+            facts.Add(BuildFact(file, inPluginsDir: true));
         }
 
         foreach (var file in SafeEnumerate(FiveMDataDirectory, "*", SearchOption.TopDirectoryOnly))
         {
-            facts.Add(new FiveMArtifactFact(Path.GetFileName(file), file, InPluginsDir: false));
+            facts.Add(BuildFact(file, inPluginsDir: false));
         }
 
         return facts;
+    }
+
+    private static FiveMArtifactFact BuildFact(string file, bool inPluginsDir)
+    {
+        var meta = FileMetadataInspector.Inspect(file);
+        return new FiveMArtifactFact(
+            Path.GetFileName(file), file, inPluginsDir, meta.Sha256.Length > 0 ? meta.Sha256 : null,
+            meta.Signed, meta.Publisher, meta.SignatureTrust);
     }
 
     private static IEnumerable<string> SafeEnumerate(

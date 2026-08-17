@@ -32,7 +32,10 @@ public record ProcessFact(
     NexusGuard.Scanner.Scanners.WinTrustChecker.SignatureTrust? SignatureTrust);
 public record ModuleFact(string Name, string Path, bool UnderGameDir, bool UnderSystemDir);
 public record FileFact(string Name, string Path);
-public record FiveMArtifactFact(string Name, string Path, bool InPluginsDir);
+public record FiveMArtifactFact(
+    string Name, string Path, bool InPluginsDir, string? Sha256,
+    bool Signed, string? Publisher,
+    NexusGuard.Scanner.Scanners.WinTrustChecker.SignatureTrust? SignatureTrust);
 public record HashFact(string Name, string Path, string Sha256);
 
 // Unified shape for every extended file-evidence scan (FiveM extra dirs, GTA V install,

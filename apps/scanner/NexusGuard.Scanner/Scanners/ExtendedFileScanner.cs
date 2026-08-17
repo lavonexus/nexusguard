@@ -65,13 +65,16 @@ public static class ExtendedFileScanner
         ScanRoot(Path.Combine(localAppData, "CitizenFX"), "FiveM", CodeExtensions, 3, 100);
 
         // --- GTA V install, if found ---
+        // "GTAV-Root" is kept distinct from the other three: it's the one location .asi files
+        // (the classic GTA V/FiveM auto-load mechanism) actually run from on every launch - see
+        // DetectionEngine.EvaluateFileEvidence's .asi handling for why that context matters.
         var gtaRoot = GtaInstallLocator.Find();
         if (gtaRoot is not null)
         {
-            ScanRoot(gtaRoot, "GTAV", CodeExtensions, 1, 100);
-            ScanRoot(Path.Combine(gtaRoot, "update"), "GTAV", CodeExtensions, 3, 150);
-            ScanRoot(Path.Combine(gtaRoot, "x64"), "GTAV", CodeExtensions, 3, 150);
-            ScanRoot(Path.Combine(gtaRoot, "mods"), "GTAV", CodeExtensions, 4, 150);
+            ScanRoot(gtaRoot, "GTAV-Root", CodeExtensions, 1, 100);
+            ScanRoot(Path.Combine(gtaRoot, "update"), "GTAV-Update", CodeExtensions, 3, 150);
+            ScanRoot(Path.Combine(gtaRoot, "x64"), "GTAV-X64", CodeExtensions, 3, 150);
+            ScanRoot(Path.Combine(gtaRoot, "mods"), "GTAV-Mods", CodeExtensions, 4, 150);
         }
 
         // --- Broad Windows user/machine directories ---

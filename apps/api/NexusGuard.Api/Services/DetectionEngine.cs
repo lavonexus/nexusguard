@@ -219,9 +219,28 @@ public class DetectionEngine : IDetectionEngine
         {
             if (fact.InPluginsDir && !KnownGraphicsProxyDllNames.Contains(fact.Name))
             {
+                var pluginConfidence = fact.Signed ? "Medium" : BumpConfidence("Medium");
                 detections.Add(NewDetection(sessionId, "fivem-plugin-dll", 25,
                     $"DLL '{fact.Name}' present in FiveM's plugins folder - loads directly into the client.",
-                    fact.Path, category: "SUSPICIOUS DLL", confidence: "Medium"));
+                    fact.Path, category: "SUSPICIOUS DLL", confidence: pluginConfidence,
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
+                continue;
+            }
+
+            // .asi is the classic GTA V/FiveM auto-load mechanism (a dinput8.dll-style proxy
+            // loads every .asi sitting next to the game executable, unconditionally, on every
+            // launch, before FiveM's own sandboxed Lua resource system even starts) - unlike an
+            // arbitrary .exe sitting on disk, an .asi here is guaranteed to run, so it earns a
+            // baseline flag on its own rather than needing a keyword match first. Still only
+            // Low/Medium - legitimate GTA V mods (trainers, graphics tweaks) use this exact
+            // mechanism too, so this is context, not an accusation.
+            if (!fact.InPluginsDir && Path.GetExtension(fact.Name).Equals(".asi", StringComparison.OrdinalIgnoreCase))
+            {
+                var confidence = fact.Signed ? "Low" : BumpConfidence("Low");
+                detections.Add(NewDetection(sessionId, "fivem-autoload-asi", 20,
+                    $"'.asi' dosyası '{fact.Name}' FiveM'in kök dizininde - her başlatmada oyun sürecine otomatik yükleniyor.",
+                    fact.Path, category: "SUSPICIOUS APPLICATION", confidence: confidence,
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
                 continue;
             }
 
@@ -343,7 +362,25 @@ public class DetectionEngine : IDetectionEngine
             }
 
             var sig = CheatSignatureDatabase.Match(fact.Name) ?? CheatSignatureDatabase.Match(fact.Path);
-            if (sig is null) continue;
+            if (sig is null)
+            {
+                // No name/hash match, but a real GTA V install's own root folder is the one
+                // place a dinput8.dll-style ASI loader picks up every .asi and runs it
+                // unconditionally on the next launch - see FiveMArtifactScanner's identical
+                // .asi handling for FiveM's own install root. Still Low - legitimate GTA V mods
+                // (trainers, graphics tweaks) use this exact same mechanism.
+                if (ext == ".asi" && fact.Category == "GTAV-Root")
+                {
+                    var asiConfidence = fact.Signed ? "Low" : BumpConfidence("Low");
+                    detections.Add(NewDetection(
+                        sessionId, "gtav-autoload-asi", 20,
+                        $"'.asi' dosyası '{fact.Name}' GTA V kurulum dizininde - her başlatmada oyun sürecine otomatik yükleniyor.",
+                        fact.Path, category: "SUSPICIOUS APPLICATION", status: "Active", confidence: asiConfidence,
+                        sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed,
+                        firstSeenUtc: fact.CreatedUtc, lastModifiedUtc: fact.ModifiedUtc));
+                }
+                continue;
+            }
 
             // A name match alone is weak by design (see CheatSignatureDatabase) - an unsigned
             // binary that also matches a suspicious name pattern is meaningfully stronger,
@@ -516,7 +553,8 @@ public class DetectionEngine : IDetectionEngine
     private record ProcessFact(string Name, int Pid, string? Sha256, bool Signed, string? Publisher);
     private record ModuleFact(string Name, string Path, bool UnderGameDir, bool UnderSystemDir);
     private record FileFact(string Name, string Path);
-    private record FiveMArtifactFact(string Name, string Path, bool InPluginsDir);
+    private record FiveMArtifactFact(
+        string Name, string Path, bool InPluginsDir, string? Sha256, bool Signed, string? Publisher);
     private record RpfFact(string Name, string Path, long SizeBytes, string Sha256, List<string>? Entries);
     private record FileEvidenceFact(
         string Name, string Path, string Category, long SizeBytes, string? Sha256,
