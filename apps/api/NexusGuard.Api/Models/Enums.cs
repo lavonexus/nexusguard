@@ -31,7 +31,8 @@ public enum ScanResultType
     Firmware,
     Steam,
     Shimcache,
-    Driver
+    Driver,
+    HostsFile
 }
 
 public enum SupportTicketStatus

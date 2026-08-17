@@ -106,6 +106,13 @@ public static class ScanRunner
             await Report(api, scanToken, "Steam", new[] { steamFact });
         }
 
+        progress.Report(new ScanProgress(44, "Checking the hosts file..."));
+        var hostsFacts = HostsFileScanner.Scan();
+        if (hostsFacts.Count > 0)
+        {
+            await Report(api, scanToken, "HostsFile", hostsFacts);
+        }
+
         progress.Report(new ScanProgress(45, "Reading Windows compatibility cache..."));
         var shimcacheFacts = ShimcacheScanner.Scan();
         if (shimcacheFacts.Count > 0)

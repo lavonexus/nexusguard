@@ -217,6 +217,20 @@ public class DetectionEngine : IDetectionEngine
         var detections = new List<Detection>();
         foreach (var fact in Deserialize<FiveMArtifactFact>(dataJson))
         {
+            // Same hash-match-first ordering as EvaluateFileEvidence, now that this fact type
+            // actually carries a hash - a known-bad sample dropped straight into FiveM's own
+            // install root would otherwise only ever be caught by the weaker keyword/extension
+            // checks below, which a simple rename defeats.
+            if (fact.Sha256 is not null &&
+                CheatSignatureDatabase.KnownBadFileHashes.TryGetValue(fact.Sha256, out var knownBad))
+            {
+                detections.Add(NewDetection(sessionId, $"known-hash:{knownBad.Category.ToLowerInvariant()}", 60,
+                    $"Dosya '{fact.Name}' bilinen kötü amaçlı örnek '{knownBad.Name}' ile SHA256 eşleşmesi gösteriyor.",
+                    fact.Path, category: knownBad.Category, confidence: "Confirmed",
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
+                continue;
+            }
+
             if (fact.InPluginsDir && !KnownGraphicsProxyDllNames.Contains(fact.Name))
             {
                 var pluginConfidence = fact.Signed ? "Medium" : BumpConfidence("Medium");
@@ -320,6 +334,24 @@ public class DetectionEngine : IDetectionEngine
         {
             var ext = Path.GetExtension(fact.Name).ToLowerInvariant();
 
+            // An exact hash match against a real, hash-identified sample - the only detection
+            // in this engine allowed straight to "Confirmed" with no correlation needed, since
+            // renaming or moving the file can't change what it actually is. Checked first, ahead
+            // of every extension-specific branch below, so a known-bad Lua script (say) still
+            // gets caught by its hash even after being renamed past the keyword check further
+            // down - a name-only check on its own would never catch that rename.
+            if (fact.Sha256 is not null &&
+                CheatSignatureDatabase.KnownBadFileHashes.TryGetValue(fact.Sha256, out var knownBad))
+            {
+                detections.Add(NewDetection(
+                    sessionId, $"known-hash:{knownBad.Category.ToLowerInvariant()}", 60,
+                    $"Dosya '{fact.Name}' bilinen kötü amaçlı örnek '{knownBad.Name}' ile SHA256 eşleşmesi gösteriyor.",
+                    fact.Path, category: knownBad.Category, status: "Active", confidence: "Confirmed",
+                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed,
+                    firstSeenUtc: fact.CreatedUtc, lastModifiedUtc: fact.ModifiedUtc));
+                continue;
+            }
+
             if (ext is ".lua" or ".luac")
             {
                 var nameLower = fact.Name.ToLowerInvariant();
@@ -341,21 +373,6 @@ public class DetectionEngine : IDetectionEngine
                     sessionId, "unsigned-driver", 15,
                     $"İmzasız çekirdek sürücüsü bulundu: '{fact.Name}'.", fact.Path,
                     category: "SUSPICIOUS DRIVER", status: "Active", confidence: "Low",
-                    sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed,
-                    firstSeenUtc: fact.CreatedUtc, lastModifiedUtc: fact.ModifiedUtc));
-                continue;
-            }
-
-            // An exact hash match against a real, hash-identified sample - the only detection
-            // in this engine allowed straight to "Confirmed" with no correlation needed, since
-            // renaming or moving the file can't change what it actually is.
-            if (fact.Sha256 is not null &&
-                CheatSignatureDatabase.KnownBadFileHashes.TryGetValue(fact.Sha256, out var knownBad))
-            {
-                detections.Add(NewDetection(
-                    sessionId, $"known-hash:{knownBad.Category.ToLowerInvariant()}", 60,
-                    $"Dosya '{fact.Name}' bilinen kötü amaçlı örnek '{knownBad.Name}' ile SHA256 eşleşmesi gösteriyor.",
-                    fact.Path, category: knownBad.Category, status: "Active", confidence: "Confirmed",
                     sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed,
                     firstSeenUtc: fact.CreatedUtc, lastModifiedUtc: fact.ModifiedUtc));
                 continue;

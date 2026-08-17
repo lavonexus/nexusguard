@@ -120,5 +120,13 @@ public record SteamFact(string SteamId64);
 // not scored, same treatment as UsbDeviceFact/FirmwareFact.
 public record ShimcacheFact(string Path, DateTime LastModifiedUtc);
 
+// A single active (non-comment) mapping from the Windows hosts file - a classic way to block
+// or redirect a specific domain system-wide without touching any application's own code
+// (e.g. pointing an anti-cheat's update/telemetry domain at 127.0.0.1 to silence it). Raw
+// facts only, informational, not scored - the default hosts file legitimately has commented-
+// out localhost examples and no active entries, but plenty of ordinary software (ad blockers,
+// dev tools, VPN/parental-control apps) also uses real hosts entries for benign reasons.
+public record HostsEntryFact(string IpAddress, string Hostname);
+
 // Drives the GUI progress bar - percent complete plus a short human-readable status line.
 public record ScanProgress(int Percent, string Status);
