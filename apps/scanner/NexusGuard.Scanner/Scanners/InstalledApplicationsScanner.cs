@@ -80,8 +80,16 @@ public static class InstalledApplicationsScanner
         var exists = PathLikelyExists(installLocation, uninstallString);
 
         return new InstalledApplicationFact(
-            displayName, publisher, displayVersion, installLocation, installDate, uninstallString, exists);
+            StripNul(displayName)!, StripNul(publisher), StripNul(displayVersion),
+            StripNul(installLocation), installDate, StripNul(uninstallString), exists);
     }
+
+    // A handful of older/malformed installers leave a stray embedded NUL character in their
+    // Uninstall registry values (a REG_SZ that was never really null-terminated cleanly). .NET
+    // reads it through fine as a C# string, but Postgres's jsonb parser rejects that character
+    // outright as untranslatable once it is JSON-serialized, turning one flaky registry entry
+    // into a 500 for the whole scan submission.
+    private static string? StripNul(string? value) => value?.Replace("\0", string.Empty);
 
     // Best-effort only - MSI-based UninstallStrings ("MsiExec.exe /X{GUID}") don't name a real
     // path at all, in which case this falls back to "unknown" (reported as ExecutablePathExists

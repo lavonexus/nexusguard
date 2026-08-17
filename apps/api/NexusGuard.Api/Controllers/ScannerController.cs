@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using NexusGuard.Api.Auth;
 using NexusGuard.Api.DTOs;
 using NexusGuard.Api.Models;
@@ -84,7 +86,20 @@ public class ScannerController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.DataJson))
             return BadRequest("DataJson is required.");
 
-        await _scanSessions.AddResultAsync(CurrentSession, type, request.DataJson);
+        try
+        {
+            await _scanSessions.AddResultAsync(CurrentSession, type, request.DataJson);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "22P05" })
+        {
+            // A source (most often an OS-provided string like a registry value) contained an
+            // embedded NUL character - valid once JSON-escaped, but Postgres's jsonb parser
+            // rejects it as untranslatable to text. Surface it as a normal 400 instead of
+            // letting it fall through as an unhandled 500 - one flaky data source on the
+            // player's machine shouldn't look like a server outage to them.
+            return BadRequest($"{request.ResultType} result contains a character Postgres can't store (likely an embedded NUL byte from a corrupted source value).");
+        }
+
         return NoContent();
     }
 
