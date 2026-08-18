@@ -323,28 +323,33 @@ function SetupPageContent() {
 
   if (revealed) {
     return (
-      <div className="mx-auto max-w-md">
-        <h1 className="text-xl font-semibold text-white">{revealed.name}</h1>
-        <p className="mt-1 text-sm text-zinc-400">{t.saveApiKeyNote}</p>
-
-        <div className="mt-6 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-          <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-violet-400">
-            {revealed.apiKey}
-          </code>
-          <button
-            onClick={handleCopy}
-            className="shrink-0 rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-zinc-600"
-          >
-            {copied ? t.copied : t.copy}
-          </button>
+      <div className="mx-auto w-full max-w-md">
+        <div className="flex flex-col items-center text-center">
+          <Logo className="h-14 w-14" glow />
+          <h1 className="mt-5 text-2xl font-semibold text-white">{revealed.name}</h1>
+          <p className="mt-2 text-sm text-zinc-400">{t.saveApiKeyNote}</p>
         </div>
 
-        <button
-          onClick={handleContinue}
-          className="mt-6 w-full rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
-        >
-          {t.continueToDashboard}
-        </button>
+        <div className="mt-8 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+            <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-violet-400">
+              {revealed.apiKey}
+            </code>
+            <button
+              onClick={handleCopy}
+              className="shrink-0 rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-zinc-600"
+            >
+              {copied ? t.copied : t.copy}
+            </button>
+          </div>
+
+          <button
+            onClick={handleContinue}
+            className="mt-4 w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-600/20 transition-colors hover:bg-violet-500"
+          >
+            {t.continueToDashboard}
+          </button>
+        </div>
       </div>
     );
   }
@@ -357,24 +362,29 @@ function SetupPageContent() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="text-xl font-semibold text-white">
-        {t.welcome}, {user?.username}
-      </h1>
-      <p className="mt-1 text-sm text-zinc-400">{t.pickOrCreate}</p>
+    <div className="mx-auto w-full max-w-md">
+      <div className="flex flex-col items-center text-center">
+        <Logo className="h-14 w-14" glow />
+        <h1 className="mt-5 text-2xl font-semibold text-white">
+          {t.welcome}, {user?.username}
+        </h1>
+        <p className="mt-2 text-sm text-zinc-400">{t.pickOrCreate}</p>
+      </div>
 
-      {servers === null && <p className="mt-6 text-sm text-zinc-500">{t.loadingServers}</p>}
+      <div className="mt-8 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm">
+        {servers === null && <p className="text-sm text-zinc-500">{t.loadingServers}</p>}
 
-      {servers !== null && servers.length > 0 && (
-        <div className="mt-6 space-y-2">
-          {servers.map((server) => (
-            <ServerRow key={server.id} server={server} t={t} locale={locale} onReady={setRevealed} />
-          ))}
+        {servers !== null && servers.length > 0 && (
+          <div className="space-y-2">
+            {servers.map((server) => (
+              <ServerRow key={server.id} server={server} t={t} locale={locale} onReady={setRevealed} />
+            ))}
+          </div>
+        )}
+
+        <div className={servers !== null && servers.length > 0 ? "mt-6 border-t border-white/10 pt-6" : ""}>
+          <NewServerForm t={t} onReady={setRevealed} />
         </div>
-      )}
-
-      <div className="mt-6 border-t border-zinc-800 pt-6">
-        <NewServerForm t={t} onReady={setRevealed} />
       </div>
     </div>
   );
@@ -413,30 +423,35 @@ function EnterpriseOnboarding({
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-800 bg-violet-950/50 px-2.5 py-1 text-xs font-medium text-violet-300">
-        {t.welcomeEnterprise}
-      </span>
-      <h1 className="mt-3 text-xl font-semibold text-white">{t.nameYourServer}</h1>
-      <p className="mt-1 text-sm text-zinc-400">{t.nameYourServerSubtitle}</p>
+    <div className="mx-auto w-full max-w-md">
+      <div className="flex flex-col items-center text-center">
+        <Logo className="h-14 w-14" glow />
+        <span className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-violet-800 bg-violet-950/50 px-2.5 py-1 text-xs font-medium text-violet-300">
+          {t.welcomeEnterprise}
+        </span>
+        <h1 className="mt-3 text-2xl font-semibold text-white">{t.nameYourServer}</h1>
+        <p className="mt-2 text-sm text-zinc-400">{t.nameYourServerSubtitle}</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          autoFocus
-          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
-          placeholder={t.serverNamePlaceholder}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? t.savingContinue : t.saveAndAccess}
-        </button>
-        {error && <p className="text-sm text-red-400">{error}</p>}
-      </form>
+      <div className="mt-8 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2.5 text-sm outline-none focus:border-violet-600"
+            placeholder={t.serverNamePlaceholder}
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-600/20 transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? t.savingContinue : t.saveAndAccess}
+          </button>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+        </form>
+      </div>
     </div>
   );
 }
@@ -469,7 +484,7 @@ function ServerRow({
   }
 
   return (
-    <div className="rounded-lg border border-zinc-800 p-3">
+    <div className="rounded-lg border border-white/10 bg-zinc-950/40 p-3">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -557,13 +572,13 @@ function NewServerForm({
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-600"
+          className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm outline-none focus:border-violet-600"
           placeholder={t.myFivemServer}
         />
         <button
           type="submit"
           disabled={loading}
-          className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-violet-600/20 transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? t.creating : t.create}
         </button>
