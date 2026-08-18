@@ -17,6 +17,7 @@ import {
 import { saveSession } from "@/lib/session";
 import { useLocale, type Locale } from "@/lib/i18n/LocaleContext";
 import { useT, type Dict } from "@/lib/i18n/useT";
+import Logo from "@/components/Logo";
 
 type AuthState = "checking" | "signed-out" | "signed-in";
 
@@ -273,44 +274,49 @@ function SetupPageContent() {
 
   if (authState === "signed-out") {
     return (
-      <div className="mx-auto max-w-sm text-center">
-        <h1 className="text-xl font-semibold text-white">{t.signInTitle}</h1>
-        <p className="mt-2 text-sm text-zinc-400">{t.signInSubtitle}</p>
-
-        {oauthError && (
-          <p className="mt-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">
-            {oauthMessages[oauthError] ?? t.genericLoginFailed}
-          </p>
-        )}
-        {error && (
-          <p className="mt-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">
-            {error}
-          </p>
-        )}
-
-        <a
-          href={DISCORD_LOGIN_URL}
-          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#5865F2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4752c4]"
-        >
-          <DiscordMark />
-          {t.loginWithDiscord}
-        </a>
-
-        <div className="mt-3 flex items-center gap-3 text-xs text-zinc-600">
-          <span className="h-px flex-1 bg-zinc-800" />
-          {t.or}
-          <span className="h-px flex-1 bg-zinc-800" />
+      <div className="mx-auto w-full max-w-sm">
+        <div className="flex flex-col items-center text-center">
+          <Logo className="h-14 w-14" glow />
+          <h1 className="mt-5 text-2xl font-semibold text-white">{t.signInTitle}</h1>
+          <p className="mt-2 text-sm text-zinc-400">{t.signInSubtitle}</p>
         </div>
 
-        <a
-          href={GOOGLE_LOGIN_URL}
-          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-700 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100"
-        >
-          <GoogleMark />
-          {t.continueWithGoogle}
-        </a>
+        <div className="mt-8 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm">
+          {oauthError && (
+            <p className="mb-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">
+              {oauthMessages[oauthError] ?? t.genericLoginFailed}
+            </p>
+          )}
+          {error && (
+            <p className="mb-4 rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">
+              {error}
+            </p>
+          )}
 
-        <p className="mt-4 text-xs text-zinc-600">{t.googleNotConfigured}</p>
+          <a
+            href={DISCORD_LOGIN_URL}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5865F2] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#5865F2]/20 transition-colors hover:bg-[#4752c4]"
+          >
+            <DiscordMark />
+            {t.loginWithDiscord}
+          </a>
+
+          <div className="my-4 flex items-center gap-3 text-xs text-zinc-600">
+            <span className="h-px flex-1 bg-white/10" />
+            {t.or}
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+
+          <a
+            href={GOOGLE_LOGIN_URL}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100"
+          >
+            <GoogleMark />
+            {t.continueWithGoogle}
+          </a>
+
+          <p className="mt-4 text-center text-xs text-zinc-600">{t.googleNotConfigured}</p>
+        </div>
       </div>
     );
   }

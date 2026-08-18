@@ -140,8 +140,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isSetup) {
     return (
-      <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
-        <header className="border-b border-zinc-800">
+      <div className="relative flex min-h-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute left-1/2 top-0 h-[560px] w-[900px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-violet-700/20 blur-[120px]" />
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+            }}
+          />
+        </div>
+
+        <header className="relative border-b border-white/5">
           <div className="mx-auto flex max-w-5xl items-center px-6 py-4">
             <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
               <Logo className="h-6 w-6" />
@@ -149,7 +161,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">{children}</main>
+        <main className="relative mx-auto flex w-full max-w-5xl flex-1 items-center px-6 py-8">
+          <div className="w-full">{children}</div>
+        </main>
       </div>
     );
   }
