@@ -48,7 +48,7 @@ const GROUPS: Dict<Group[]> = {
     {
       title: "Ekip ve Destek",
       rows: [
-        { label: "Yönetici hesabı", free: "1", pro: "1", proDuo: "2", enterprise: "5+" },
+        { label: "Yönetici hesabı", free: "1", pro: "1", proDuo: "1", enterprise: "5+" },
         { label: "Kurumsal ekip paneli (üye ekle/çıkar, yönetici rolü)", free: false, pro: false, proDuo: false, enterprise: true },
         { label: "Destek", free: "Standart", pro: "Öncelikli", proDuo: "7/24", enterprise: "Özel" },
         { label: "Tarama sonucu yorumlama desteği", free: false, pro: false, proDuo: true, enterprise: true },
@@ -77,7 +77,7 @@ const GROUPS: Dict<Group[]> = {
     {
       title: "Team & Support",
       rows: [
-        { label: "Admin accounts", free: "1", pro: "1", proDuo: "2", enterprise: "5+" },
+        { label: "Admin accounts", free: "1", pro: "1", proDuo: "1", enterprise: "5+" },
         { label: "Enterprise team panel (add/remove, manager role)", free: false, pro: false, proDuo: false, enterprise: true },
         { label: "Support", free: "Standard", pro: "Priority", proDuo: "24/7", enterprise: "Dedicated" },
         { label: "Scan result interpretation help", free: false, pro: false, proDuo: true, enterprise: true },

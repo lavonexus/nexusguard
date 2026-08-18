@@ -5,7 +5,7 @@ import { useT, type Dict } from "@/lib/i18n/useT";
 
 const MIN_SEATS = 5;
 const MAX_SEATS = 50;
-const BASE_PRICE = 30;
+const BASE_PRICE = 25;
 const ORIGINAL_BASE_PRICE = 45;
 const PRICE_PER_EXTRA_SEAT = 5;
 

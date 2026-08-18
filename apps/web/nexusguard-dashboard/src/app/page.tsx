@@ -91,18 +91,17 @@ const PACKAGES: Dict<Package[]> = {
     {
       name: "PRO",
       tagline: "Tek kişilik yönetim",
-      price: "$20",
+      price: "$10",
       period: "/ay",
       features: ["Sınırsız tarama", "Tool Designer kaydetme", "1 yönetici hesabı"],
     },
     {
       name: "PROFESSIONAL",
-      tagline: "İki yönetici + 7/24 destek",
-      price: "$25",
+      tagline: "7/24 destek",
+      price: "$20",
       period: "/ay",
       features: [
         "PRO'daki her şey",
-        "2 yönetici hesabı",
         "7/24 teknik destek",
         "Tarama sonucu yorumlama desteği",
       ],
@@ -110,7 +109,7 @@ const PACKAGES: Dict<Package[]> = {
     {
       name: "ENTERPRISE",
       tagline: "5 kişiden başlar, kişi başı +$5",
-      price: "$30",
+      price: "$25",
       originalPrice: "$45",
       period: "/ay",
       features: ["PROFESSIONAL'daki her şey", "5+ kişilik ekip yönetimi", "Kurumsal ekip paneli"],
@@ -121,18 +120,17 @@ const PACKAGES: Dict<Package[]> = {
     {
       name: "PRO",
       tagline: "Single-admin management",
-      price: "$20",
+      price: "$10",
       period: "/mo",
       features: ["Unlimited scans", "Tool Designer saving", "1 admin account"],
     },
     {
       name: "PROFESSIONAL",
-      tagline: "Two admins + 24/7 support",
-      price: "$25",
+      tagline: "24/7 support",
+      price: "$20",
       period: "/mo",
       features: [
         "Everything in PRO",
-        "2 admin accounts",
         "24/7 technical support",
         "Scan result interpretation help",
       ],
@@ -140,7 +138,7 @@ const PACKAGES: Dict<Package[]> = {
     {
       name: "ENTERPRISE",
       tagline: "Starts at 5 people, +$5 each",
-      price: "$30",
+      price: "$25",
       originalPrice: "$45",
       period: "/mo",
       features: ["Everything in PROFESSIONAL", "5+ person team management", "Enterprise team panel"],
