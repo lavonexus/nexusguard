@@ -72,6 +72,8 @@ const STRINGS: Dict<{
   hide: string;
   show: string;
   accountsTitle: string;
+  discordLabel: string;
+  steamLabel: string;
   rpfDetectionsTitle: string;
   rpfDetectionsDesc: string;
   knownNameBadge: string;
@@ -151,6 +153,8 @@ const STRINGS: Dict<{
     hide: "Gizle",
     show: "Göster",
     accountsTitle: "Hesaplar",
+    discordLabel: "Discord",
+    steamLabel: "Steam",
     rpfDetectionsTitle: "RPF tespitleri",
     rpfDetectionsDesc:
       "Bilinen kötü amaçlı RPF adlarıyla birebir eşleşenler ile, arşivin kendi içeriğinde (dosya adına değil) bilinen bir hile/oyun içi değişiklik izine rastlanan RPF'ler.",
@@ -236,6 +240,8 @@ const STRINGS: Dict<{
     hide: "Hide",
     show: "Show",
     accountsTitle: "Accounts",
+    discordLabel: "Discord",
+    steamLabel: "Steam",
     rpfDetectionsTitle: "RPF detections",
     rpfDetectionsDesc:
       "Exact matches against known malicious RPF names, plus RPFs whose own content (not filename) matched a known cheat/game-modification signature.",
@@ -1132,35 +1138,47 @@ function AccountsCard<TSummary extends ScanSummaryLike>({ session, t }: { sessio
   return (
     <div className="rounded-xl border border-zinc-800 p-4">
       <h2 className="text-sm font-semibold text-zinc-200">{t.accountsTitle}</h2>
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 space-y-4">
         {session.discordUserId && (
-          <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5865F2]/15 text-[#5865F2]">
-              <DiscordMark className="h-4 w-4" />
-            </span>
-            {session.discordAvatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={session.discordAvatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
-            ) : null}
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-zinc-200">{session.discordUsername}</div>
-              <div className="truncate font-mono text-[11px] text-zinc-600">{session.discordUserId}</div>
+          <div className={session.steamId64 ? "border-b border-zinc-800 pb-4" : ""}>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[#5865F2]">
+              <DiscordMark className="h-3 w-3" />
+              {t.discordLabel}
+            </div>
+            <div className="mt-2 flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5865F2]/15 text-[#5865F2]">
+                <DiscordMark className="h-4 w-4" />
+              </span>
+              {session.discordAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.discordAvatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+              ) : null}
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-zinc-200">{session.discordUsername}</div>
+                <div className="truncate font-mono text-[11px] text-zinc-600">{session.discordUserId}</div>
+              </div>
             </div>
           </div>
         )}
 
         {session.steamId64 && (
-          <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1b2838] text-[#66c0f4]">
-              <SteamMark className="h-4 w-4" />
-            </span>
-            {session.steamAvatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={session.steamAvatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
-            ) : null}
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-zinc-200">{session.steamUsername ?? "—"}</div>
-              <div className="truncate font-mono text-[11px] text-zinc-600">{session.steamId64}</div>
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[#66c0f4]">
+              <SteamMark className="h-3 w-3" />
+              {t.steamLabel}
+            </div>
+            <div className="mt-2 flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1b2838] text-[#66c0f4]">
+                <SteamMark className="h-4 w-4" />
+              </span>
+              {session.steamAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.steamAvatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+              ) : null}
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-zinc-200">{session.steamUsername ?? "—"}</div>
+                <div className="truncate font-mono text-[11px] text-zinc-600">{session.steamId64}</div>
+              </div>
             </div>
           </div>
         )}
