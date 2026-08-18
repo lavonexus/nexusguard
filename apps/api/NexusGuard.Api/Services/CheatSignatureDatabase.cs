@@ -40,9 +40,14 @@ public static class CheatSignatureDatabase
             35, "Medium"),
 
         // --- Injectors -----------------------------------------------------------------
+        // Deliberately no bare "injector.exe" pattern - confirmed as a real false-positive
+        // source: it matched Blitz.gg's own signed, legitimate safe_x64_injector.exe/
+        // safe_x86_injector.exe (a game FPS-boost overlay, publisher "Swift Media Entertainment,
+        // Inc.") in an actual scan. "Injector" alone is too generic a word to name-match on -
+        // the patterns below are specific enough to actual cheat-tool names to stay.
         new("DLL/Process Injector", "INJECTOR",
             new[] { "dllinjector", "dll injector", "dll-injector", "dll_injector", "processinjector",
-                     "process injector", "extreme injector", "xenos injector", "injector.exe" },
+                     "process injector", "extreme injector", "xenos injector" },
             30, "Low"),
         new("Internal Cheat Loader", "INJECTOR",
             new[] { "internal cheat", "internalcheat", "internal loader", "internalloader" },

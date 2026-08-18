@@ -21,10 +21,14 @@ public class DetectionEngine : IDetectionEngine
 
     // Same signatures ProcessScanner/FileSystemScanner used to check client-side in Phase 3 -
     // the difference is these now run on data the client can no longer curate.
+    // No bare "injector" fragment here - same real false positive as CheatSignatureDatabase's
+    // DLL/Process Injector signature (see its comment): Blitz.gg's legitimate, signed
+    // safe_x64_injector.exe/safe_x86_injector.exe would match a running-process check on this
+    // exact word just as readily as the file-name check it was actually caught by.
     private static readonly string[] ProcessNameFragments =
     {
         "cheatengine", "cheat engine", "x64dbg", "x32dbg", "ollydbg", "ida64", "ida ",
-        "extreme injector", "xenos", "injector", "artmoney", "processhacker",
+        "extreme injector", "xenos", "artmoney", "processhacker",
         "reclass", "dnspy",
         "hwid spoof", "hwidspoof", "hwid changer", "hwidchanger", "spoofer",
         "eacbypass", "eac bypass", "battleyebypass", "battleye bypass", "anticheatbypass",
