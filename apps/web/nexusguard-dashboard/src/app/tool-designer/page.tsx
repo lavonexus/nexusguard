@@ -766,15 +766,15 @@ function ScannerPreview({ theme, stage }: { theme: ScannerTheme; stage: StageKey
   const progressByStage: Record<StageKey, number> = { pin: 0, early: 10, scanning: 35, deep: 60, detection: 85, done: 100 };
 
   return (
-    <div className="relative flex h-72 flex-col p-6" style={{ backgroundColor: theme.backgroundColor }}>
-      <div className="flex flex-1 items-center gap-8">
+    <div className="relative flex h-72 flex-col items-center p-6" style={{ backgroundColor: theme.backgroundColor }}>
+      <div className="flex w-full flex-1 flex-col items-center justify-center gap-6">
         <div className="flex shrink-0 flex-col items-center gap-2">
           {theme.logoBase64 ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={theme.logoBase64} alt="Logo" className="h-16 w-16 object-contain" />
+            <img src={theme.logoBase64} alt="Logo" className="h-14 w-14 object-contain" />
           ) : (
             <div
-              className="flex h-16 w-16 items-center justify-center rounded-xl text-xl font-bold text-white"
+              className="flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white"
               style={{ backgroundColor: theme.accentColor }}
             >
               NG
@@ -785,7 +785,7 @@ function ScannerPreview({ theme, stage }: { theme: ScannerTheme; stage: StageKey
           </span>
         </div>
 
-        <div className="flex-1">
+        <div className="flex w-full flex-col items-center text-center">
           {stage === "pin" && (
             <>
               <div className="text-lg font-semibold" style={{ color: theme.primaryTextColor }}>
@@ -816,7 +816,7 @@ function ScannerPreview({ theme, stage }: { theme: ScannerTheme; stage: StageKey
               <div className="mt-1 text-xs" style={{ color: theme.secondaryTextColor }}>
                 {stageText[stage]}
               </div>
-              <div className="mt-4 h-2.5 w-full max-w-sm overflow-hidden rounded-full" style={{ backgroundColor: theme.surfaceColor }}>
+              <div className="mt-4 h-2.5 w-full max-w-md overflow-hidden rounded-full" style={{ backgroundColor: theme.surfaceColor }}>
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${progressByStage[stage]}%`, backgroundColor: theme.progressColor }}
