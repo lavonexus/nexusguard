@@ -389,21 +389,17 @@ public class DetectionEngine : IDetectionEngine
             var sig = CheatSignatureDatabase.Match(fact.Name) ?? CheatSignatureDatabase.Match(fact.Path);
             if (sig is null)
             {
-                // No name/hash match, but a real GTA V install's own root folder is the one
-                // place a dinput8.dll-style ASI loader picks up every .asi and runs it
-                // unconditionally on the next launch - see FiveMArtifactScanner's identical
-                // .asi handling for FiveM's own install root. Still Low - legitimate GTA V mods
-                // (trainers, graphics tweaks) use this exact same mechanism.
-                if (ext == ".asi" && fact.Category == "GTAV-Root")
-                {
-                    var asiConfidence = fact.Signed ? "Low" : BumpConfidence("Low");
-                    detections.Add(NewDetection(
-                        sessionId, "gtav-autoload-asi", 20,
-                        $"'.asi' dosyası '{fact.Name}' GTA V kurulum dizininde - her başlatmada oyun sürecine otomatik yükleniyor.",
-                        fact.Path, category: "SUSPICIOUS APPLICATION", status: "Active", confidence: asiConfidence,
-                        sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed,
-                        firstSeenUtc: fact.CreatedUtc, lastModifiedUtc: fact.ModifiedUtc));
-                }
+                // Deliberately no bare ".asi in the GTA V root" flag here anymore - confirmed as
+                // a real false-positive source. A standalone GTA V install (Steam/Epic/Rockstar)
+                // is NOT what FiveM actually runs on: FiveM ships and runs its own copy of the
+                // game assets (see GtaInstallLocator's own comment), so a separate install's ASI
+                // mods only ever affect that install's own single-player sessions, never a FiveM
+                // one. In a real scan this fired on OpenIV.asi, Menyoo.asi, NativeTrainer.asi,
+                // and openCameraV.asi - four of the most common, entirely legitimate single-player
+                // GTA V modding tools that exist, with no realistic bound on how many more there
+                // are. FiveM's own install root keeps the equivalent check (EvaluateFiveMArtifacts'
+                // fivem-autoload-asi) since FiveM's own client genuinely does load ASI plugins
+                // from its own directory - that premise doesn't apply to a separate GTA V install.
                 continue;
             }
 
