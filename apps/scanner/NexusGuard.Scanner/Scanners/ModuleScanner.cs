@@ -53,7 +53,31 @@ public static class ModuleScanner
             var underSystemDir = path.StartsWith(systemDir, StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith(windowsDir, StringComparison.OrdinalIgnoreCase);
 
-            facts.Add(new ModuleFact(module.ModuleName, path, underGameDir, underSystemDir));
+            // Hash/signature only for modules outside the game and system directories - the
+            // only ones the Detection Engine actually scores (see EvaluateModules), and the
+            // module list here can run into the hundreds, so this skips the cost everywhere
+            // it wouldn't change anything anyway.
+            string? sha256 = null;
+            bool signed = false;
+            string? publisher = null;
+            WinTrustChecker.SignatureTrust? signatureTrust = null;
+            if (!underGameDir && !underSystemDir)
+            {
+                try
+                {
+                    var meta = FileMetadataInspector.Inspect(path);
+                    sha256 = meta.Sha256.Length > 0 ? meta.Sha256 : null;
+                    signed = meta.Signed;
+                    publisher = meta.Publisher;
+                    signatureTrust = meta.SignatureTrust;
+                }
+                catch
+                {
+                    // Module reported by the process but no longer readable - leave metadata blank.
+                }
+            }
+
+            facts.Add(new ModuleFact(module.ModuleName, path, underGameDir, underSystemDir, sha256, signed, publisher, signatureTrust));
         }
 
         return facts;

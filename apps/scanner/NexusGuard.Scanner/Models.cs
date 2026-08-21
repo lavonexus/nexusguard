@@ -30,7 +30,14 @@ public record ProcessFact(
     string Name, int Pid, string? Path, string? Sha256,
     bool Signed, string? Publisher, string? ParentProcessName,
     NexusGuard.Scanner.Scanners.WinTrustChecker.SignatureTrust? SignatureTrust);
-public record ModuleFact(string Name, string Path, bool UnderGameDir, bool UnderSystemDir);
+// Sha256/Signed/Publisher/SignatureTrust are only ever populated for modules outside the game
+// and system directories - see ModuleScanner's own comment for why (the only ones the
+// Detection Engine's injected-module check actually scores, and the full module list can run
+// into the hundreds).
+public record ModuleFact(
+    string Name, string Path, bool UnderGameDir, bool UnderSystemDir,
+    string? Sha256, bool Signed, string? Publisher,
+    NexusGuard.Scanner.Scanners.WinTrustChecker.SignatureTrust? SignatureTrust);
 public record FileFact(string Name, string Path);
 public record FiveMArtifactFact(
     string Name, string Path, bool InPluginsDir, string? Sha256,

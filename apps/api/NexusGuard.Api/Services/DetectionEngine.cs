@@ -197,9 +197,22 @@ public class DetectionEngine : IDetectionEngine
         {
             if (fact.UnderGameDir || fact.UnderSystemDir) continue;
 
+            // Being loaded into FiveM's live process from outside both its own install and
+            // Windows' own directories is real signal on its own - unlike a file merely sitting
+            // on disk, this code is actively running inside the game right now. But a flat
+            // "High" regardless of anything else means a name match alone (even against a
+            // well-known legitimate tool's own filename) reads as near-certain - exactly the
+            // gap a real detection exposed: OldNewExplorer64.dll (a real, legitimate Explorer
+            // customization tool) loaded into FiveM, with nothing here to tell a genuine copy
+            // of that tool apart from something reusing its name. Untrusted/unsigned is the
+            // real corroborating evidence that earns High; signed-and-trusted stays Medium.
+            var untrusted = fact.SignatureTrust is not (null or "Trusted");
+            var confidence = fact.Signed && !untrusted ? "Medium" : "High";
+
             detections.Add(NewDetection(sessionId, "injected-module", 40,
                 $"Module '{fact.Name}' loaded into the FiveM process from outside its install and system directories.",
-                fact.Path, category: "SUSPICIOUS DLL", confidence: "High"));
+                fact.Path, category: "SUSPICIOUS DLL", confidence: confidence,
+                sha256: fact.Sha256, publisher: fact.Publisher, signed: fact.Signed));
         }
         return detections;
     }
@@ -640,7 +653,9 @@ public class DetectionEngine : IDetectionEngine
     // only the fields this engine actually reads; ProcessScanner also sends Path/ParentProcessName,
     // which JSON deserialization simply ignores here.
     private record ProcessFact(string Name, int Pid, string? Sha256, bool Signed, string? Publisher);
-    private record ModuleFact(string Name, string Path, bool UnderGameDir, bool UnderSystemDir);
+    private record ModuleFact(
+        string Name, string Path, bool UnderGameDir, bool UnderSystemDir,
+        string? Sha256, bool Signed, string? Publisher, string? SignatureTrust);
     private record FileFact(string Name, string Path);
     private record FiveMArtifactFact(
         string Name, string Path, bool InPluginsDir, string? Sha256, bool Signed, string? Publisher);
