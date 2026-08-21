@@ -105,6 +105,8 @@ const STRINGS: Dict<{
   bootLabel: string;
   secureBootLabel: string;
   tpmLabel: string;
+  testSigningLabel: string;
+  testSigningDesc: string;
   firmwareBootEntriesLabel: string;
   unknown: string;
   on: string;
@@ -191,6 +193,9 @@ const STRINGS: Dict<{
     bootLabel: "Önyükleme",
     secureBootLabel: "Secure Boot",
     tpmLabel: "TPM",
+    testSigningLabel: "Test Signing Mode",
+    testSigningDesc:
+      "Açıksa, Windows normalde reddedeceği imzasız çekirdek sürücülerinin yüklenmesine izin veriyor demektir - HWID spoofer'lar ve anti-cheat bypass araçlarının kullandığı yaygın bir yöntem. Diğerlerinden farklı olarak bu alan puanlamaya dahildir.",
     firmwareBootEntriesLabel: "Firmware önyükleme girişi",
     unknown: "Bilinmiyor",
     on: "Açık",
@@ -278,6 +283,9 @@ const STRINGS: Dict<{
     bootLabel: "Boot",
     secureBootLabel: "Secure Boot",
     tpmLabel: "TPM",
+    testSigningLabel: "Test Signing Mode",
+    testSigningDesc:
+      "If on, Windows allows unsigned kernel drivers to load that it would otherwise reject - a common technique behind HWID spoofers and anti-cheat bypass tools. Unlike the fields above, this one is scored.",
     firmwareBootEntriesLabel: "Firmware boot entries",
     unknown: "Unknown",
     on: "On",
@@ -333,6 +341,7 @@ interface FirmwareFact {
   tpmActivated: boolean | null;
   tpmSpecVersion: string | null;
   bootEntries: FirmwareBootEntry[];
+  testSigningEnabled: boolean | null;
 }
 
 // The full rich scan-detail view (sidebar category nav, risk donut, finding log, RPF/USB/
@@ -890,7 +899,24 @@ function FirmwareSection({ fact, t }: { fact: FirmwareFact; t: T }) {
           }
         />
         <Field label={t.firmwareBootEntriesLabel} value={fact.bootEntries.length.toString()} />
+        <div>
+          <dt className="text-xs text-zinc-500">{t.testSigningLabel}</dt>
+          <dd
+            className={`mt-0.5 text-sm ${
+              fact.testSigningEnabled ? "font-semibold text-amber-300" : "text-zinc-200"
+            }`}
+          >
+            {fact.testSigningEnabled === null ? t.unknown : fact.testSigningEnabled ? t.on : t.off}
+          </dd>
+        </div>
       </div>
+
+      {fact.testSigningEnabled && (
+        <div className="mt-3 flex items-start gap-3 rounded-lg border border-amber-800/50 bg-amber-950/20 px-4 py-3">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-amber-500 text-xs font-bold text-black">!</span>
+          <p className="text-sm text-amber-200">{t.testSigningDesc}</p>
+        </div>
+      )}
 
       {fact.bootEntries.length > 0 && (
         <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800">
