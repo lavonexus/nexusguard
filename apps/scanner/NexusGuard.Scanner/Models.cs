@@ -131,5 +131,14 @@ public record ShimcacheFact(string Path, DateTime LastModifiedUtc);
 // dev tools, VPN/parental-control apps) also uses real hosts entries for benign reasons.
 public record HostsEntryFact(string IpAddress, string Hostname);
 
+// One Prefetch entry (see PrefetchScanner) - proof a given executable ran at some point, with
+// an approximate last-run time. Admin-only source, informational, not scored.
+public record PrefetchFact(string ExecutableName, DateTime LastModifiedUtc);
+
+// One Amcache InventoryApplicationFile entry (see AmcacheScanner) - real file metadata
+// (hash, publisher, size, link date) surviving even after the file itself is deleted.
+// Admin-only source, informational, not scored.
+public record AmcacheFact(string Path, string? Sha1, string? Publisher, DateTime? LinkDateUtc, long? SizeBytes);
+
 // Drives the GUI progress bar - percent complete plus a short human-readable status line.
 public record ScanProgress(int Percent, string Status);

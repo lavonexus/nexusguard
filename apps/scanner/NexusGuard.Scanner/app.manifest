@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="NexusGuard.Scanner"/>
+
+  <!-- requireAdministrator triggers a UAC prompt on every launch - deliberate, confirmed
+       trade-off: it's the only way to read the Prefetch folder and the Amcache.hve registry
+       hive, both locked to Administrators/SYSTEM at the OS level (empirically confirmed -
+       "access denied" under a normal, non-elevated token, no workaround exists short of this).
+       Every other scanner in this project stays fully read-only regardless of this - see
+       DetectionEngine's own "never trust the client" comment and the project's read-only
+       scanner guarantee, both unaffected by running elevated. -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 7 through 11 - same compatibility list .NET's own default manifest declares,
+           kept here since supplying a custom manifest replaces rather than extends it. -->
+      <supportedOS Id="{e2011457-1546-43c5-a5fe-008deee3d3f0}"/>
+      <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+      <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+</assembly>

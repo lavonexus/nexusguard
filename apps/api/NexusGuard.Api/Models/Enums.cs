@@ -32,7 +32,9 @@ public enum ScanResultType
     Steam,
     Shimcache,
     Driver,
-    HostsFile
+    HostsFile,
+    Prefetch,
+    Amcache
 }
 
 public enum SupportTicketStatus

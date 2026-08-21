@@ -120,6 +120,20 @@ public static class ScanRunner
             await Report(api, scanToken, "Shimcache", shimcacheFacts);
         }
 
+        progress.Report(new ScanProgress(45, "Reading Prefetch execution history..."));
+        var prefetchFacts = PrefetchScanner.Scan();
+        if (prefetchFacts.Count > 0)
+        {
+            await Report(api, scanToken, "Prefetch", prefetchFacts);
+        }
+
+        progress.Report(new ScanProgress(46, "Reading Windows application inventory..."));
+        var amcacheFacts = AmcacheScanner.Scan();
+        if (amcacheFacts.Count > 0)
+        {
+            await Report(api, scanToken, "Amcache", amcacheFacts);
+        }
+
         progress.Report(new ScanProgress(45, "Scanning FiveM, GTA V, and Windows user directories..."));
         var extendedFacts = ExtendedFileScanner.Scan();
         if (extendedFacts.Count > 0)

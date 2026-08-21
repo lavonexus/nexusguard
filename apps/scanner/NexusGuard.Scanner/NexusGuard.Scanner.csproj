@@ -9,6 +9,7 @@
     <RootNamespace>NexusGuard.Scanner</RootNamespace>
     <AssemblyName>NexusGuard.Scanner</AssemblyName>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
