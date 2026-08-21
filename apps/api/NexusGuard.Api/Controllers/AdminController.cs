@@ -280,6 +280,96 @@ public class AdminController : ControllerBase
         return NoContent();
     }
 
+    // Same grant ServersController.SetMemberRole gives the owner, just reachable by a site
+    // admin on any server too - same reasoning as the add/remove endpoints above.
+    [HttpPut("servers/{id:guid}/members/{memberId:guid}/role")]
+    public async Task<ActionResult<ServerMemberResponse>> SetServerMemberRole(Guid id, Guid memberId, SetMemberRoleRequest request)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        if (request.Role != "Manager" && request.Role != "Member")
+            return BadRequest("Role must be \"Manager\" or \"Member\".");
+
+        var member = await _db.ServerMembers.Include(m => m.User).FirstOrDefaultAsync(m => m.Id == memberId && m.ServerId == id);
+        if (member is null) return NotFound();
+
+        member.Role = request.Role;
+        await _db.SaveChangesAsync();
+
+        var scanStats = await _db.ScanSessions
+            .Where(s => s.ServerId == id && s.CreatedByUserId == member.UserId)
+            .GroupBy(s => 1)
+            .Select(g => new { Count = g.Count(), LastActive = g.Max(s => s.CreatedAt) })
+            .FirstOrDefaultAsync();
+
+        return new ServerMemberResponse(
+            member.Id, member.UserId, member.User?.Username ?? "(bilinmiyor)", member.Role, member.AddedAt,
+            scanStats?.Count ?? 0, scanStats?.LastActive);
+    }
+
+    // Transfers ownership of a server to a different NexusGuard user - the previous owner
+    // becomes a regular Member (not removed - they still had real reasons to be involved with
+    // this server) rather than just dropped, and the new owner's own ServerMember row (if they
+    // were already on the team) is removed, since Owner is tracked on Server.OwnerUserId, never
+    // as a ServerMember row - same rule ServersController.AddMember already enforces. Site-
+    // admin-only: reassigning who effectively controls a paying customer's account/API key
+    // isn't something to expose to a Manager, and there's no self-serve equivalent at all.
+    [HttpPut("servers/{id:guid}/owner")]
+    public async Task<ActionResult<AdminServerResponse>> ChangeServerOwner(Guid id, AddMemberRequest request)
+    {
+        var (forbidden, _) = await RequireSiteAdminAsync();
+        if (forbidden is not null) return forbidden;
+
+        var server = await _db.Servers.Include(s => s.Owner).FirstOrDefaultAsync(s => s.Id == id);
+        if (server is null) return NotFound();
+
+        var identifier = request.Identifier?.Trim();
+        if (string.IsNullOrWhiteSpace(identifier))
+            return BadRequest("A Discord username, Discord ID, or Google email is required.");
+
+        var isEmail = identifier.Contains('@');
+        var isDiscordId = !isEmail && identifier.All(char.IsDigit);
+        var newOwner = isEmail
+            ? await _db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == identifier.ToLower())
+            : isDiscordId
+                ? await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == identifier)
+                : await _db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == identifier.ToLower());
+
+        if (newOwner is null)
+        {
+            return NotFound(isEmail
+                ? "No NexusGuard user with that email - they need to sign in with Google at least once first."
+                : isDiscordId
+                    ? "No NexusGuard user with that Discord ID - they need to sign in with Discord at least once first."
+                    : "No NexusGuard user with that Discord username - they need to sign in with Discord at least once first.");
+        }
+
+        if (newOwner.Id == server.OwnerUserId)
+            return BadRequest("That user already owns this server.");
+
+        var previousOwnerId = server.OwnerUserId;
+
+        var newOwnerExistingMembership = await _db.ServerMembers.FirstOrDefaultAsync(m => m.ServerId == id && m.UserId == newOwner.Id);
+        if (newOwnerExistingMembership is not null)
+            _db.ServerMembers.Remove(newOwnerExistingMembership);
+
+        _db.ServerMembers.Add(new ServerMember
+        {
+            Id = Guid.NewGuid(),
+            ServerId = id,
+            UserId = previousOwnerId,
+            Role = "Member",
+            AddedAt = DateTime.UtcNow,
+        });
+
+        server.OwnerUserId = newOwner.Id;
+        await _db.SaveChangesAsync();
+
+        server.Owner = newOwner;
+        return await ToAdminServerResponseAsync(server);
+    }
+
     private async Task<AdminServerResponse> ToAdminServerResponseAsync(Server server)
     {
         var memberCount = await _db.ServerMembers.CountAsync(m => m.ServerId == server.Id);

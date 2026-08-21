@@ -7,9 +7,11 @@ import {
   ApiError,
   adminAddMember,
   adminCancelPlan,
+  adminChangeServerOwner,
   adminDeleteMarketplaceListing,
   adminDeleteMarketplaceReview,
   adminRemoveMember,
+  adminSetMemberRole,
   adminSetPlan,
   deleteAdminScan,
   getMarketplaceListing,
@@ -80,6 +82,14 @@ const STRINGS: Dict<{
   ownerLabel: string;
   managerLabel: string;
   memberLabel: string;
+  makeManagerButton: string;
+  makeMemberButton: string;
+  changeOwnerTitle: string;
+  changeOwnerPlaceholder: string;
+  changeOwnerButton: string;
+  changingOwner: string;
+  changeOwnerConfirm: string;
+  yesChangeOwner: string;
   userSearchPlaceholder: string;
   colUser: string;
   colEmail: string;
@@ -173,6 +183,14 @@ const STRINGS: Dict<{
     ownerLabel: "Sahip",
     managerLabel: "Yönetici",
     memberLabel: "Üye",
+    makeManagerButton: "Yönetici yap",
+    makeMemberButton: "Üye yap",
+    changeOwnerTitle: "Sahibi değiştir",
+    changeOwnerPlaceholder: "Yeni sahibin Discord kullanıcı adı, Discord ID ya da Google e-postası",
+    changeOwnerButton: "Sahibi değiştir",
+    changingOwner: "Değiştiriliyor...",
+    changeOwnerConfirm: "Bu sunucunun sahibini değiştirmek üzeresin - mevcut sahip normal üye olarak kalır, API anahtarı kontrolü yeni sahibe geçer.",
+    yesChangeOwner: "Evet, sahibi değiştir",
     userSearchPlaceholder: "Kullanıcı adı ya da e-posta ile ara",
     colUser: "Kullanıcı",
     colEmail: "E-posta",
@@ -267,6 +285,14 @@ const STRINGS: Dict<{
     ownerLabel: "Owner",
     managerLabel: "Manager",
     memberLabel: "Member",
+    makeManagerButton: "Make manager",
+    makeMemberButton: "Make member",
+    changeOwnerTitle: "Change owner",
+    changeOwnerPlaceholder: "New owner's Discord username, Discord ID, or Google email",
+    changeOwnerButton: "Change owner",
+    changingOwner: "Changing...",
+    changeOwnerConfirm: "You're about to change this server's owner - the current owner becomes a regular member, and control of the API key passes to the new owner.",
+    yesChangeOwner: "Yes, change owner",
     userSearchPlaceholder: "Search by username or email",
     colUser: "User",
     colEmail: "Email",
@@ -711,7 +737,7 @@ function ServerRow({
       {membersOpen && server.plan === "Enterprise" && (
         <tr>
           <td colSpan={6} className="border-t border-zinc-800 bg-zinc-950/60 px-4 py-4">
-            <AdminMembersPanel server={server} t={t} locale={locale} onMemberCountChanged={onMemberCountChanged} />
+            <AdminMembersPanel server={server} t={t} locale={locale} onMemberCountChanged={onMemberCountChanged} onOwnerChanged={onSaved} />
           </td>
         </tr>
       )}
@@ -724,16 +750,23 @@ function AdminMembersPanel({
   t,
   locale,
   onMemberCountChanged,
+  onOwnerChanged,
 }: {
   server: AdminServerResponse;
   t: T;
   locale: Locale;
   onMemberCountChanged: (delta: number) => void;
+  onOwnerChanged: (s: AdminServerResponse) => void;
 }) {
   const [members, setMembers] = useState<ServerMemberResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [identifier, setIdentifier] = useState("");
   const [adding, setAdding] = useState(false);
+  const [roleChangingId, setRoleChangingId] = useState<string | null>(null);
+  const [newOwnerIdentifier, setNewOwnerIdentifier] = useState("");
+  const [confirmingOwnerChange, setConfirmingOwnerChange] = useState(false);
+  const [changingOwner, setChangingOwner] = useState(false);
+  const [ownerError, setOwnerError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     listAdminServerMembers(server.id)
@@ -772,6 +805,37 @@ function AdminMembersPanel({
     }
   }
 
+  async function handleToggleRole(member: ServerMemberResponse) {
+    const nextRole = member.role === "Manager" ? "Member" : "Manager";
+    setRoleChangingId(member.id);
+    setError(null);
+    try {
+      await adminSetMemberRole(server.id, member.id, nextRole);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.apiUnreachable);
+    } finally {
+      setRoleChangingId(null);
+    }
+  }
+
+  async function handleChangeOwner() {
+    if (!newOwnerIdentifier.trim()) return;
+    setChangingOwner(true);
+    setOwnerError(null);
+    try {
+      const updated = await adminChangeServerOwner(server.id, newOwnerIdentifier.trim());
+      onOwnerChanged(updated);
+      setNewOwnerIdentifier("");
+      setConfirmingOwnerChange(false);
+      load();
+    } catch (err) {
+      setOwnerError(err instanceof ApiError ? err.message : t.apiUnreachable);
+    } finally {
+      setChangingOwner(false);
+    }
+  }
+
   const roleLabel = (role: string) => (role === "Owner" ? t.ownerLabel : role === "Manager" ? t.managerLabel : t.memberLabel);
   const dateFmt = locale === "en" ? "en-US" : "tr-TR";
 
@@ -806,15 +870,63 @@ function AdminMembersPanel({
               <span className="text-xs text-zinc-600">{new Date(m.addedAt).toLocaleDateString(dateFmt)}</span>
             </div>
             {m.role !== "Owner" && (
-              <button
-                onClick={() => handleRemove(m.id)}
-                className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
-              >
-                {t.removeMemberButton}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleToggleRole(m)}
+                  disabled={roleChangingId === m.id}
+                  className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400 hover:border-violet-700 hover:text-violet-300 disabled:opacity-50"
+                >
+                  {m.role === "Manager" ? t.makeMemberButton : t.makeManagerButton}
+                </button>
+                <button
+                  onClick={() => handleRemove(m.id)}
+                  className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400 hover:border-red-800 hover:text-red-400"
+                >
+                  {t.removeMemberButton}
+                </button>
+              </div>
             )}
           </div>
         ))}
+      </div>
+
+      <div className="mt-4 border-t border-zinc-800 pt-3">
+        <div className="text-xs font-medium text-zinc-400">{t.changeOwnerTitle}</div>
+        <div className="mt-2 flex gap-2">
+          <input
+            value={newOwnerIdentifier}
+            onChange={(e) => setNewOwnerIdentifier(e.target.value)}
+            placeholder={t.changeOwnerPlaceholder}
+            disabled={confirmingOwnerChange}
+            className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm outline-none focus:border-violet-600 disabled:opacity-50"
+          />
+          {!confirmingOwnerChange ? (
+            <button
+              onClick={() => newOwnerIdentifier.trim() && setConfirmingOwnerChange(true)}
+              className="rounded-md border border-amber-800 px-3 py-1.5 text-xs font-medium text-amber-300 hover:border-amber-600"
+            >
+              {t.changeOwnerButton}
+            </button>
+          ) : (
+            <span className="inline-flex shrink-0 items-center gap-1.5">
+              <button
+                onClick={handleChangeOwner}
+                disabled={changingOwner}
+                className="rounded-md border border-amber-800 px-2 py-1 text-xs text-amber-300 hover:bg-amber-950/40 disabled:opacity-50"
+              >
+                {changingOwner ? t.changingOwner : t.yesChangeOwner}
+              </button>
+              <button
+                onClick={() => setConfirmingOwnerChange(false)}
+                className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-600"
+              >
+                {t.cancel}
+              </button>
+            </span>
+          )}
+        </div>
+        {confirmingOwnerChange && !ownerError && <p className="mt-2 text-xs text-amber-500">{t.areYouSure} {t.changeOwnerConfirm}</p>}
+        {ownerError && <p className="mt-2 text-xs text-red-400">{ownerError}</p>}
       </div>
     </div>
   );

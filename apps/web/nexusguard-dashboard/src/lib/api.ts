@@ -523,6 +523,22 @@ export function adminRemoveMember(serverId: string, memberId: string) {
   });
 }
 
+export function adminSetMemberRole(serverId: string, memberId: string, role: "Manager" | "Member") {
+  return sessionRequest<ServerMemberResponse>(`/api/admin/servers/${serverId}/members/${memberId}/role`, {
+    method: "PUT",
+    body: JSON.stringify({ role }),
+  });
+}
+
+// Transfers ownership to a different NexusGuard user - the previous owner becomes a regular
+// Member rather than being dropped. Site-admin-only, no self-serve equivalent.
+export function adminChangeServerOwner(serverId: string, identifier: string) {
+  return sessionRequest<AdminServerResponse>(`/api/admin/servers/${serverId}/owner`, {
+    method: "PUT",
+    body: JSON.stringify({ identifier }),
+  });
+}
+
 // Reactive safety net for the marketplace - listings/reviews publish immediately with no
 // approval gate, so this is the only way to take down something inappropriate after the fact.
 export function adminDeleteMarketplaceListing(id: string) {
